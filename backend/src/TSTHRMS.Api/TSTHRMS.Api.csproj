@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="11.11.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.10">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
+    <PackageReference Include="Scalar.AspNetCore" Version="2.4.5" />
+    <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TSTHRMS.Application\TSTHRMS.Application.csproj" />
+    <ProjectReference Include="..\TSTHRMS.Infrastructure\TSTHRMS.Infrastructure.csproj" />
+    <ProjectReference Include="..\TSTHRMS.Domain\TSTHRMS.Domain.csproj" />
+  </ItemGroup>
+
+  <!--
+    Builds the React SPA and copies it into wwwroot so a single published app serves both
+    the API and the frontend (single-origin deployment - see docs/deployment-windows-server-iis.md).
+    Only runs on `dotnet publish`, never on `dotnet build`/`dotnet run`, so local dev (Vite dev
+    server + Vite proxy) is unaffected. Skip with -p:SkipFrontendBuild=true if the frontend was
+    already built separately (e.g. a dedicated CI step).
+  -->
+  <Target Name="BuildAndCopyFrontend" BeforeTargets="Publish" Condition="'$(SkipFrontendBuild)' != 'true'">
+    <Exec Command="npm ci" WorkingDirectory="$(MSBuildProjectDirectory)/../../../frontend" />
+    <Exec Command="npm run build" WorkingDirectory="$(MSBuildProjectDirectory)/../../../frontend" />
+    <ItemGroup>
+      <FrontendDist Include="$(MSBuildProjectDirectory)/../../../frontend/dist/**/*.*" />
+    </ItemGroup>
+    <Copy SourceFiles="@(FrontendDist)" DestinationFolder="$(MSBuildProjectDirectory)/wwwroot/%(RecursiveDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

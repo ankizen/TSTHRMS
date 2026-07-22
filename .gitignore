@@ -1,0 +1,40 @@
+# ---- .NET ----
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/
+*.dbmdl
+*.pdb
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json.example
+
+# ---- Node / Frontend ----
+node_modules/
+frontend/dist/
+frontend/build/
+.vite/
+*.local
+
+# ---- Publish-time frontend copy (see TSTHRMS.Api.csproj BuildAndCopyFrontend target) ----
+backend/src/TSTHRMS.Api/wwwroot/
+
+# ---- Env / secrets ----
+.env
+.env.*
+!.env.example
+
+# ---- Logs ----
+logs/
+*.log
+
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+
+# ---- Uploaded documents (local dev storage) ----
+backend/storage/
+storage/uploads/

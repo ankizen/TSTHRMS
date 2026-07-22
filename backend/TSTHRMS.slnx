@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TSTHRMS.Api/TSTHRMS.Api.csproj" />
+    <Project Path="src/TSTHRMS.Application/TSTHRMS.Application.csproj" />
+    <Project Path="src/TSTHRMS.Domain/TSTHRMS.Domain.csproj" />
+    <Project Path="src/TSTHRMS.Infrastructure/TSTHRMS.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TSTHRMS.IntegrationTests/TSTHRMS.IntegrationTests.csproj" />
+    <Project Path="tests/TSTHRMS.UnitTests/TSTHRMS.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,12 @@
+{
+  "ConnectionStrings": {
+    "Default": "Server=localhost;Port=3306;Database=tsthrms_dev;User=tsthrms;Password=tsthrms_dev_password;"
+  },
+  "Jwt": {
+    "Key": "REPLACE_WITH_A_RANDOM_64+_CHARACTER_SECRET_NEVER_COMMITTED"
+  },
+  "SeedAdmin": {
+    "Email": "admin@thinkersteps.local",
+    "Password": "ChangeMe123!"
+  }
+}
