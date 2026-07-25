@@ -2,6 +2,7 @@ export type EmployeeStatus = "Active" | "OnLeave" | "NoticePeriod" | "Exited"
 export type Gender = "Male" | "Female" | "Other" | "PreferNotToSay"
 export type EmploymentType = "FullTime" | "Contract" | "Intern"
 export type DateOfBirthProofType = "Aadhaar" | "BirthCertificate" | "TenthMarksheet" | "Other"
+export type ConfirmationStatus = "Probation" | "Confirmed"
 
 export interface Lookup {
   id: string
@@ -56,6 +57,14 @@ export interface Employee {
   isEsicApplicable: boolean
   isMaharashtraLwfEligible: boolean
   hasMinorOrDifferentlyAbledDependent: boolean
+  probationEndDate: string | null
+  confirmationStatus: ConfirmationStatus
+  confirmationDate: string | null
+  confirmingManagerId: string | null
+  confirmingManagerName: string | null
+  contractStartDate: string | null
+  contractEndDate: string | null
+  isContractExpiringSoon: boolean
 }
 
 export interface EmployeeWriteRequest {
@@ -83,6 +92,14 @@ export interface EmployeeWriteRequest {
   monthlyGrossSalary: number | null
   dateOfBirthProofType: DateOfBirthProofType | null
   professionalTaxState: string | null
+  probationEndDate: string | null
+  contractStartDate: string | null
+  contractEndDate: string | null
+}
+
+export interface ConfirmEmployeeRequest {
+  confirmingManagerId: string
+  confirmationDate: string | null
 }
 
 export interface PagedResult<T> {

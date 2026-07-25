@@ -73,4 +73,12 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
         var employee = await employeeService.AcknowledgePoshPolicyAsync(id, cancellationToken);
         return employee is null ? NotFound() : Ok(employee);
     }
+
+    [HttpPost("{id:guid}/confirm")]
+    [Authorize(Roles = HrWriteRoles)]
+    public async Task<ActionResult<EmployeeDto>> Confirm(Guid id, ConfirmEmployeeRequest request, CancellationToken cancellationToken)
+    {
+        var employee = await employeeService.ConfirmAsync(id, request, cancellationToken);
+        return employee is null ? NotFound() : Ok(employee);
+    }
 }

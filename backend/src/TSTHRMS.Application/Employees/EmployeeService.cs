@@ -60,6 +60,7 @@ public class EmployeeService(
             .Include(e => e.LegalEntity)
             .Include(e => e.Product)
             .Include(e => e.ReportingManager)
+            .Include(e => e.ConfirmingManager)
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
@@ -96,7 +97,10 @@ public class EmployeeService(
             EmploymentType = request.EmploymentType,
             MonthlyGrossSalary = request.MonthlyGrossSalary,
             DateOfBirthProofType = request.DateOfBirthProofType,
-            ProfessionalTaxState = request.ProfessionalTaxState
+            ProfessionalTaxState = request.ProfessionalTaxState,
+            ProbationEndDate = request.ProbationEndDate ?? request.DateOfJoining.AddMonths(ProbationDefaults.DurationMonths),
+            ContractStartDate = request.ContractStartDate,
+            ContractEndDate = request.ContractEndDate
         };
 
         dbContext.Employees.Add(employee);
@@ -145,6 +149,26 @@ public class EmployeeService(
         employee.MonthlyGrossSalary = request.MonthlyGrossSalary;
         employee.DateOfBirthProofType = request.DateOfBirthProofType;
         employee.ProfessionalTaxState = request.ProfessionalTaxState;
+        employee.ProbationEndDate = request.ProbationEndDate ?? employee.ProbationEndDate;
+        employee.ContractStartDate = request.ContractStartDate;
+        employee.ContractEndDate = request.ContractEndDate;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return await GetByIdAsync(id, cancellationToken);
+    }
+
+    public async Task<EmployeeDto?> ConfirmAsync(Guid id, ConfirmEmployeeRequest request, CancellationToken cancellationToken = default)
+    {
+        var employee = await dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+        if (employee is null)
+        {
+            return null;
+        }
+
+        employee.ConfirmationStatus = ConfirmationStatus.Confirmed;
+        employee.ConfirmationDate = request.ConfirmationDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+        employee.ConfirmingManagerId = request.ConfirmingManagerId;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -208,7 +232,12 @@ public class EmployeeService(
 
     private async Task<EmployeeDto> ToDtoAsync(Employee e, CancellationToken cancellationToken)
     {
-        var eighteenYearsAgo = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-18);
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var eighteenYearsAgo = today.AddYears(-18);
+
+        var isContractExpiringSoon = e.ContractEndDate is not null
+            && e.ContractEndDate >= today
+            && e.ContractEndDate <= today.AddDays(ProbationDefaults.ContractExpiryWarningDays);
 
         // Computed from Section 4 family data rather than stored redundantly - see Section 7's
         // note that this flag "affects gratuity nomination" without needing its own input.
@@ -251,6 +280,14 @@ public class EmployeeService(
             ComplianceRules.IsPfApplicable(e.LegalEntity?.IsPfRegistered ?? false, e.MonthlyGrossSalary),
             ComplianceRules.IsEsicApplicable(e.LegalEntity?.IsEsicRegistered ?? false, e.MonthlyGrossSalary),
             ComplianceRules.IsMaharashtraLwfEligible(e.ProfessionalTaxState, e.MonthlyGrossSalary),
-            hasMinorOrDifferentlyAbledDependent);
+            hasMinorOrDifferentlyAbledDependent,
+            e.ProbationEndDate,
+            e.ConfirmationStatus,
+            e.ConfirmationDate,
+            e.ConfirmingManagerId,
+            e.ConfirmingManager is null ? null : $"{e.ConfirmingManager.FirstName} {e.ConfirmingManager.LastName}",
+            e.ContractStartDate,
+            e.ContractEndDate,
+            isContractExpiringSoon);
     }
 }

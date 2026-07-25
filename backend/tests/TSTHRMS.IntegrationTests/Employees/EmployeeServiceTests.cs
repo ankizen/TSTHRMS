@@ -100,6 +100,54 @@ public class EmployeeServiceTests : IAsyncLifetime
         Assert.Equal(created.FirstName, updated.FirstName);
     }
 
+    [Fact]
+    public async Task Create_auto_calculates_probation_end_date_when_not_supplied()
+    {
+        await using var context = CreateContext(_tenantId);
+        var service = CreateService(context, _tenantId);
+
+        var created = await service.CreateAsync(BuildRequest());
+
+        Assert.Equal(new DateOnly(2020, 1, 1).AddMonths(ProbationDefaults.DurationMonths), created.ProbationEndDate);
+        Assert.Equal(ConfirmationStatus.Probation, created.ConfirmationStatus);
+    }
+
+    [Fact]
+    public async Task Confirm_transitions_status_and_records_manager_and_date()
+    {
+        await using var context = CreateContext(_tenantId);
+        var service = CreateService(context, _tenantId);
+
+        var employee = await service.CreateAsync(BuildRequest());
+        var manager = await service.CreateAsync(BuildRequest() with { FirstName = "Grace", LastName = "Hopper" });
+
+        var confirmed = await service.ConfirmAsync(
+            employee.Id, new ConfirmEmployeeRequest(manager.Id, new DateOnly(2020, 7, 1)));
+
+        Assert.Equal(ConfirmationStatus.Confirmed, confirmed!.ConfirmationStatus);
+        Assert.Equal(new DateOnly(2020, 7, 1), confirmed.ConfirmationDate);
+        Assert.Equal(manager.Id, confirmed.ConfirmingManagerId);
+        Assert.Contains("Hopper", confirmed.ConfirmingManagerName);
+    }
+
+    [Fact]
+    public async Task Contract_end_date_within_the_warning_window_flags_as_expiring_soon()
+    {
+        await using var context = CreateContext(_tenantId);
+        var service = CreateService(context, _tenantId);
+
+        var soonToExpire = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(10));
+        var created = await service.CreateAsync(
+            BuildRequest() with
+            {
+                EmploymentType = EmploymentType.Contract,
+                ContractStartDate = new DateOnly(2020, 1, 1),
+                ContractEndDate = soonToExpire,
+            });
+
+        Assert.True(created.IsContractExpiringSoon);
+    }
+
     private EmployeeWriteRequest BuildRequest() => new(
         _legalEntityId,
         _productId,
@@ -124,7 +172,10 @@ public class EmployeeServiceTests : IAsyncLifetime
         EmploymentType.FullTime,
         12000m,
         DateOfBirthProofType.Aadhaar,
-        "Maharashtra");
+        "Maharashtra",
+        null,
+        null,
+        null);
 
     private static EmployeeService CreateService(ApplicationDbContext context, Guid tenantId) =>
         new(context, new SequenceGenerator(context, new TestTenantContext(tenantId)), new TestCurrentUserService());

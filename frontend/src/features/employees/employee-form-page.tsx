@@ -31,6 +31,7 @@ import { NomineeSection } from "./nominees/nominee-section"
 import { PreviousEmploymentSection } from "./previous-employment/previous-employment-section"
 import {
   acknowledgePoshPolicy,
+  confirmEmployee,
   createEmployee,
   getEmployee,
   getEmployees,
@@ -73,6 +74,9 @@ const emptyValues: EmployeeFormValues = {
   monthlyGrossSalary: null,
   dateOfBirthProofType: null,
   professionalTaxState: "",
+  probationEndDate: "",
+  contractStartDate: "",
+  contractEndDate: "",
 }
 
 export function EmployeeFormPage() {
@@ -81,6 +85,7 @@ export function EmployeeFormPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [revealedBankAccount, setRevealedBankAccount] = useState<string | null>(null)
+  const [confirmingManagerId, setConfirmingManagerId] = useState("")
 
   const employeeQuery = useQuery({
     queryKey: ["employee", id],
@@ -135,6 +140,9 @@ export function EmployeeFormPage() {
       monthlyGrossSalary: employee.monthlyGrossSalary,
       dateOfBirthProofType: employee.dateOfBirthProofType,
       professionalTaxState: employee.professionalTaxState ?? "",
+      probationEndDate: employee.probationEndDate ?? "",
+      contractStartDate: employee.contractStartDate ?? "",
+      contractEndDate: employee.contractEndDate ?? "",
     })
   }, [employeeQuery.data, reset])
 
@@ -159,6 +167,9 @@ export function EmployeeFormPage() {
         monthlyGrossSalary: values.monthlyGrossSalary ?? null,
         dateOfBirthProofType: values.dateOfBirthProofType || null,
         professionalTaxState: values.professionalTaxState || null,
+        probationEndDate: values.probationEndDate || null,
+        contractStartDate: values.contractStartDate || null,
+        contractEndDate: values.contractEndDate || null,
       }
       return isEdit ? updateEmployee(id!, request) : createEmployee(request)
     },
@@ -187,6 +198,17 @@ export function EmployeeFormPage() {
       await queryClient.invalidateQueries({ queryKey: ["employee", id] })
     },
     onError: () => toast.error("Couldn't record the acknowledgment."),
+  })
+
+  const confirmMutation = useMutation({
+    mutationFn: (request: { confirmingManagerId: string; confirmationDate: string | null }) =>
+      confirmEmployee(id!, request),
+    onSuccess: async () => {
+      toast.success("Employee confirmed")
+      setConfirmingManagerId("")
+      await queryClient.invalidateQueries({ queryKey: ["employee", id] })
+    },
+    onError: () => toast.error("Couldn't confirm the employee."),
   })
 
   const managerOptions = (managersQuery.data?.items ?? []).filter((employee) => employee.id !== id)
@@ -415,6 +437,77 @@ export function EmployeeFormPage() {
               )}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Probation & Contract</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="probationEndDate">Probation end date</Label>
+              <Input id="probationEndDate" type="date" {...register("probationEndDate")} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="contractStartDate">Contract start date</Label>
+              <Input id="contractStartDate" type="date" {...register("contractStartDate")} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="contractEndDate">Contract end date</Label>
+              <Input id="contractEndDate" type="date" {...register("contractEndDate")} />
+              {errors.contractEndDate && (
+                <p className="text-sm text-destructive">{errors.contractEndDate.message}</p>
+              )}
+            </div>
+          </div>
+
+          {isEdit && employeeQuery.data && (
+            <div className="flex flex-col gap-3 border-t pt-4">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant={employeeQuery.data.confirmationStatus === "Confirmed" ? "default" : "secondary"}>
+                  {employeeQuery.data.confirmationStatus === "Confirmed"
+                    ? `Confirmed ${employeeQuery.data.confirmationDate ?? ""} by ${employeeQuery.data.confirmingManagerName ?? "-"}`
+                    : "On probation"}
+                </Badge>
+                {employeeQuery.data.isContractExpiringSoon && (
+                  <Badge variant="destructive">Contract expiring soon</Badge>
+                )}
+              </div>
+
+              {employeeQuery.data.confirmationStatus === "Probation" && (
+                <div className="flex items-end gap-2">
+                  <div className="flex flex-col gap-2">
+                    <Label>Confirming manager</Label>
+                    <Select value={confirmingManagerId} onValueChange={setConfirmingManagerId}>
+                      <SelectTrigger className="w-[220px]">
+                        <SelectValue placeholder="Select manager" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {managerOptions.map((manager) => (
+                          <SelectItem key={manager.id} value={manager.id}>
+                            {manager.firstName} {manager.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!confirmingManagerId || confirmMutation.isPending}
+                    onClick={() =>
+                      confirmMutation.mutate({ confirmingManagerId, confirmationDate: null })
+                    }
+                  >
+                    Confirm employee
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 

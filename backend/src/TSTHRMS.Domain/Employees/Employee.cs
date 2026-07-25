@@ -54,6 +54,17 @@ public class Employee : TenantScopedEntity
     public DateOfBirthProofType? DateOfBirthProofType { get; set; }
     public string? ProfessionalTaxState { get; set; }
     public DateTimeOffset? PoshAcknowledgedAt { get; set; }
+
+    // Probation & Contract Tracking (Section 8)
+    public DateOnly? ProbationEndDate { get; set; }
+    public ConfirmationStatus ConfirmationStatus { get; set; } = ConfirmationStatus.Probation;
+    public DateOnly? ConfirmationDate { get; set; }
+    public Guid? ConfirmingManagerId { get; set; }
+    public Employee? ConfirmingManager { get; set; }
+
+    /// <summary>Only meaningful for Contract/Intern employment types.</summary>
+    public DateOnly? ContractStartDate { get; set; }
+    public DateOnly? ContractEndDate { get; set; }
 }
 
 public enum Gender
@@ -86,4 +97,10 @@ public enum DateOfBirthProofType
     BirthCertificate,
     TenthMarksheet,
     Other
+}
+
+public enum ConfirmationStatus
+{
+    Probation,
+    Confirmed
 }

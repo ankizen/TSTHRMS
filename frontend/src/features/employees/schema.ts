@@ -39,6 +39,9 @@ export const employeeFormSchema = z.object({
     .optional()
     .nullable(),
   professionalTaxState: optionalText,
+  probationEndDate: optionalText,
+  contractStartDate: optionalText,
+  contractEndDate: optionalText,
 })
 
 export type EmployeeFormValues = z.infer<typeof employeeFormSchema>

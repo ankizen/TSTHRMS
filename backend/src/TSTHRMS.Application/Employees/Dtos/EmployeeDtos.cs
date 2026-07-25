@@ -49,7 +49,15 @@ public record EmployeeDto(
     bool IsPfApplicable,
     bool IsEsicApplicable,
     bool IsMaharashtraLwfEligible,
-    bool HasMinorOrDifferentlyAbledDependent);
+    bool HasMinorOrDifferentlyAbledDependent,
+    DateOnly? ProbationEndDate,
+    ConfirmationStatus ConfirmationStatus,
+    DateOnly? ConfirmationDate,
+    Guid? ConfirmingManagerId,
+    string? ConfirmingManagerName,
+    DateOnly? ContractStartDate,
+    DateOnly? ContractEndDate,
+    bool IsContractExpiringSoon);
 
 public record EmployeeWriteRequest(
     Guid LegalEntityId,
@@ -75,9 +83,14 @@ public record EmployeeWriteRequest(
     EmploymentType EmploymentType,
     decimal? MonthlyGrossSalary,
     DateOfBirthProofType? DateOfBirthProofType,
-    string? ProfessionalTaxState);
+    string? ProfessionalTaxState,
+    DateOnly? ProbationEndDate,
+    DateOnly? ContractStartDate,
+    DateOnly? ContractEndDate);
 
 public record UpdateEmployeeStatusRequest(EmployeeStatus Status);
+
+public record ConfirmEmployeeRequest(Guid ConfirmingManagerId, DateOnly? ConfirmationDate);
 
 /// <summary>Wrapped so "employee not found" (null) is distinguishable from "found, but no
 /// bank account on file" (BankAccountNumber is null but the DTO itself is not).</summary>

@@ -1,5 +1,6 @@
 import { apiClient } from "@/lib/api-client"
 import type {
+  ConfirmEmployeeRequest,
   Employee,
   EmployeeListItem,
   EmployeeStatus,
@@ -49,6 +50,11 @@ export async function revealBankAccountNumber(id: string): Promise<string | null
 
 export async function acknowledgePoshPolicy(id: string): Promise<Employee> {
   const { data } = await apiClient.post<Employee>(`/employees/${id}/posh-acknowledgment`)
+  return data
+}
+
+export async function confirmEmployee(id: string, request: ConfirmEmployeeRequest): Promise<Employee> {
+  const { data } = await apiClient.post<Employee>(`/employees/${id}/confirm`, request)
   return data
 }
 
