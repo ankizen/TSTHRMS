@@ -22,9 +22,3 @@ public record EducationRecordWriteRequest(
     string? Specialization);
 
 public record UpdateVerificationStatusRequest(VerificationStatus VerificationStatus);
-
-public record AttachCertificateResult(bool Succeeded, EducationRecordDto? Record, string? Error)
-{
-    public static AttachCertificateResult Success(EducationRecordDto record) => new(true, record, null);
-    public static AttachCertificateResult Failure(string error) => new(false, null, error);
-}

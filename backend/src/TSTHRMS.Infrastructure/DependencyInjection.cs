@@ -59,6 +59,7 @@ public static class DependencyInjection
         services.AddSingleton<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IEducationService, EducationService>();
         services.AddScoped<IFamilyService, FamilyService>();
+        services.AddScoped<IPreviousEmploymentService, PreviousEmploymentService>();
 
         return services;
     }

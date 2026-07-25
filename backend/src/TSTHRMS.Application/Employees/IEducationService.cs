@@ -1,3 +1,4 @@
+using TSTHRMS.Application.Common.Dtos;
 using TSTHRMS.Application.Employees.Dtos;
 using TSTHRMS.Domain.Employees;
 
@@ -18,7 +19,7 @@ public interface IEducationService
 
     /// <summary>Null return means the employee/education record wasn't found; a Failure result
     /// means it was found but the file didn't pass size/type validation.</summary>
-    Task<AttachCertificateResult?> AttachCertificateAsync(
+    Task<AttachDocumentResult<EducationRecordDto>?> AttachCertificateAsync(
         Guid employeeId, Guid id, Stream content, string fileName, string contentType, long sizeBytes,
         CancellationToken cancellationToken = default);
 }

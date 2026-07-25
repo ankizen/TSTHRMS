@@ -15,6 +15,7 @@ public interface IApplicationDbContext
     DbSet<Employee> Employees { get; }
     DbSet<EducationRecord> EducationRecords { get; }
     DbSet<FamilyMember> FamilyMembers { get; }
+    DbSet<PreviousEmploymentRecord> PreviousEmploymentRecords { get; }
     DbSet<Document> Documents { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

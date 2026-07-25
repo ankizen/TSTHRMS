@@ -1,18 +1,14 @@
 using Microsoft.EntityFrameworkCore;
+using TSTHRMS.Application.Common;
+using TSTHRMS.Application.Common.Dtos;
 using TSTHRMS.Application.Common.Interfaces;
 using TSTHRMS.Application.Employees.Dtos;
-using TSTHRMS.Domain.Documents;
 using TSTHRMS.Domain.Employees;
 
 namespace TSTHRMS.Application.Employees;
 
 public class EducationService(IApplicationDbContext dbContext, IFileStorageService fileStorageService) : IEducationService
 {
-    private static readonly HashSet<string> AllowedContentTypes =
-        new(StringComparer.OrdinalIgnoreCase) { "application/pdf", "image/jpeg", "image/png" };
-
-    private const long MaxFileSizeBytes = 10 * 1024 * 1024;
-
     public async Task<IReadOnlyList<EducationRecordDto>> GetForEmployeeAsync(
         Guid employeeId, CancellationToken cancellationToken = default)
     {
@@ -99,7 +95,7 @@ public class EducationService(IApplicationDbContext dbContext, IFileStorageServi
         return ToDto(record);
     }
 
-    public async Task<AttachCertificateResult?> AttachCertificateAsync(
+    public async Task<AttachDocumentResult<EducationRecordDto>?> AttachCertificateAsync(
         Guid employeeId, Guid id, Stream content, string fileName, string contentType, long sizeBytes,
         CancellationToken cancellationToken = default)
     {
@@ -109,45 +105,19 @@ public class EducationService(IApplicationDbContext dbContext, IFileStorageServi
             return null;
         }
 
-        if (sizeBytes > MaxFileSizeBytes)
+        var validationError = DocumentValidation.Validate(sizeBytes, contentType);
+        if (validationError is not null)
         {
-            return AttachCertificateResult.Failure("File exceeds the 10MB limit.");
+            return AttachDocumentResult<EducationRecordDto>.Failure(validationError);
         }
 
-        if (!AllowedContentTypes.Contains(contentType))
-        {
-            return AttachCertificateResult.Failure("Only PDF, JPG, and PNG files are accepted.");
-        }
+        record.CertificateDocument = await DocumentAttachmentHelper.SaveAndReplaceAsync(
+            dbContext, fileStorageService, record.TenantId, record.CertificateDocumentId,
+            content, fileName, contentType, sizeBytes, cancellationToken);
 
-        var previousDocumentId = record.CertificateDocumentId;
-
-        var storageKey = await fileStorageService.SaveAsync(content, fileName, cancellationToken);
-        var document = new Document
-        {
-            TenantId = record.TenantId,
-            FileName = fileName,
-            ContentType = contentType,
-            SizeBytes = sizeBytes,
-            StorageKey = storageKey,
-            UploadedAt = DateTimeOffset.UtcNow
-        };
-
-        dbContext.Documents.Add(document);
-        record.CertificateDocument = document;
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        if (previousDocumentId is not null)
-        {
-            var previousDocument = await dbContext.Documents.FindAsync([previousDocumentId], cancellationToken);
-            if (previousDocument is not null)
-            {
-                await fileStorageService.DeleteAsync(previousDocument.StorageKey, cancellationToken);
-                dbContext.Documents.Remove(previousDocument);
-                await dbContext.SaveChangesAsync(cancellationToken);
-            }
-        }
-
-        return AttachCertificateResult.Success(ToDto(record));
+        return AttachDocumentResult<EducationRecordDto>.Success(ToDto(record));
     }
 
     private Task<EducationRecord?> FindAsync(Guid employeeId, Guid id, CancellationToken cancellationToken) =>
