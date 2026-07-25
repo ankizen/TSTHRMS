@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Serilog;
+using TSTHRMS.Api;
 using TSTHRMS.Api.Extensions;
 using TSTHRMS.Api.Filters;
 using TSTHRMS.Api.Middleware;
@@ -104,6 +105,17 @@ try
     // empty and this is a harmless no-op there too, same as it is locally under `dotnet run`.
     app.UseDefaultFiles();
     app.UseStaticFiles();
+
+    // On a split deployment the frontend lives on a different origin entirely (Vercel), so
+    // nothing else answers at the API's own "/" - show a friendly status page instead of a bare
+    // 404. Only registered when there's no real SPA to serve here (i.e. wwwroot has no
+    // index.html), so this can never shadow the single-origin IIS deployment's actual frontend.
+    var webRootPath = app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+    var wwwrootIndexPath = Path.Combine(webRootPath, "index.html");
+    if (!File.Exists(wwwrootIndexPath))
+    {
+        app.MapGet("/", () => Results.Content(StatusPage.Html, "text/html"));
+    }
 
     app.UseAuthentication();
     app.UseAuthorization();
