@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Check, X } from "lucide-react"
+import { Check, ClipboardCheck, X } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
+import { EmptyState } from "@/components/empty-state"
+import { TableSkeletonRows } from "@/components/table-skeleton-rows"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -42,7 +44,7 @@ export function EditRequestsPage() {
         <p className="text-muted-foreground">{requests.length} pending</p>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-xl border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -56,15 +58,15 @@ export function EditRequestsPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                  Loading...
-                </TableCell>
-              </TableRow>
+              <TableSkeletonRows columns={6} />
             ) : requests.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
-                  No pending requests.
+                <TableCell colSpan={6}>
+                  <EmptyState
+                    icon={ClipboardCheck}
+                    title="No pending requests"
+                    description="Employee self-service edit requests will show up here for review."
+                  />
                 </TableCell>
               </TableRow>
             ) : (

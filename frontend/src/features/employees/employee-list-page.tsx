@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
-import { Download, Plus, Search, Upload } from "lucide-react"
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Plus, Search, Upload, UsersRound } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Link, useNavigate } from "react-router-dom"
@@ -15,25 +15,29 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { EmptyState } from "@/components/empty-state"
+import { TableSkeletonRows } from "@/components/table-skeleton-rows"
 import { exportEmployees, getEmployees, getLegalEntities, getProducts } from "./api"
 import { EMPLOYEE_STATUS_BADGE_VARIANT, EMPLOYEE_STATUS_OPTIONS } from "./constants"
-import type { EmployeeListFilter, EmployeeListItem, EmployeeStatus } from "./types"
+import type { EmployeeListFilter, EmployeeListItem, EmployeeSortBy, EmployeeStatus } from "./types"
 
 const columns: ColumnDef<EmployeeListItem>[] = [
-  { accessorKey: "employeeCode", header: "Code" },
+  { accessorKey: "employeeCode", header: "Code", meta: { sortBy: "code" } },
   {
     id: "name",
     header: "Name",
     cell: ({ row }) => `${row.original.firstName} ${row.original.lastName}`,
+    meta: { sortBy: "name" },
   },
   { accessorKey: "legalEntityName", header: "Entity" },
   { accessorKey: "productName", header: "Product" },
-  { accessorKey: "department", header: "Department" },
-  { accessorKey: "designation", header: "Designation" },
+  { accessorKey: "department", header: "Department", meta: { sortBy: "department" } },
+  { accessorKey: "designation", header: "Designation", meta: { sortBy: "designation" } },
   { accessorKey: "workLocation", header: "Work Location" },
   {
     accessorKey: "status",
     header: "Status",
+    meta: { sortBy: "status" },
     cell: ({ getValue }) => {
       const status = getValue<EmployeeStatus>()
       return <Badge variant={EMPLOYEE_STATUS_BADGE_VARIANT[status]}>{status}</Badge>
@@ -54,6 +58,8 @@ export function EmployeeListPage() {
   const [workLocation, setWorkLocation] = useState("")
   const [page, setPage] = useState(1)
   const [isExporting, setIsExporting] = useState(false)
+  const [sortBy, setSortBy] = useState<EmployeeSortBy>("name")
+  const [sortDescending, setSortDescending] = useState(false)
 
   const { data: legalEntities = [] } = useQuery({ queryKey: ["legal-entities"], queryFn: getLegalEntities })
   const { data: products = [] } = useQuery({ queryKey: ["products"], queryFn: getProducts })
@@ -66,6 +72,8 @@ export function EmployeeListPage() {
     department: department || undefined,
     designation: designation || undefined,
     workLocation: workLocation || undefined,
+    sortBy,
+    sortDescending,
   }
 
   const { data, isLoading } = useQuery({
@@ -85,6 +93,16 @@ export function EmployeeListPage() {
     }
   }
 
+  const toggleSort = (column: EmployeeSortBy) => {
+    if (sortBy === column) {
+      setSortDescending((prev) => !prev)
+    } else {
+      setSortBy(column)
+      setSortDescending(false)
+    }
+    setPage(1)
+  }
+
   const table = useReactTable({
     data: data?.items ?? [],
     columns,
@@ -92,6 +110,7 @@ export function EmployeeListPage() {
   })
 
   const totalPages = data ? Math.max(1, Math.ceil(data.totalCount / PAGE_SIZE)) : 1
+  const hasActiveFilters = Boolean(search || department || designation || workLocation) || status !== "all" || legalEntityId !== "all" || productId !== "all"
 
   return (
     <div className="flex flex-col gap-4">
@@ -219,32 +238,68 @@ export function EmployeeListPage() {
         />
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-xl border">
         <Table>
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
+                {headerGroup.headers.map((header) => {
+                  const sortKey = (header.column.columnDef.meta as { sortBy?: EmployeeSortBy } | undefined)?.sortBy
+                  const isSorted = sortKey === sortBy
+
+                  return (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder ? null : sortKey ? (
+                        <button
+                          type="button"
+                          onClick={() => toggleSort(sortKey)}
+                          className="flex items-center gap-1 transition-colors hover:text-foreground"
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {isSorted ? (
+                            sortDescending ? (
+                              <ArrowDown className="size-3.5" />
+                            ) : (
+                              <ArrowUp className="size-3.5" />
+                            )
+                          ) : (
+                            <ArrowUpDown className="size-3.5 opacity-30" />
+                          )}
+                        </button>
+                      ) : (
+                        flexRender(header.column.columnDef.header, header.getContext())
+                      )}
+                    </TableHead>
+                  )
+                })}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                  Loading...
-                </TableCell>
-              </TableRow>
+              <TableSkeletonRows columns={columns.length} />
             ) : table.getRowModel().rows.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                  No employees found.
+                <TableCell colSpan={columns.length}>
+                  <EmptyState
+                    icon={UsersRound}
+                    title={hasActiveFilters ? "No employees match these filters" : "No employees yet"}
+                    description={
+                      hasActiveFilters
+                        ? "Try adjusting or clearing your search and filters."
+                        : "Add your first employee or bulk import from a spreadsheet."
+                    }
+                    action={
+                      !hasActiveFilters && (
+                        <Button asChild size="sm" className="mt-1">
+                          <Link to="/employees/new">
+                            <Plus />
+                            New Employee
+                          </Link>
+                        </Button>
+                      )
+                    }
+                  />
                 </TableCell>
               </TableRow>
             ) : (

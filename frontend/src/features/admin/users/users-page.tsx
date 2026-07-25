@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { Plus, Trash2 } from "lucide-react"
+import { KeyRound, Plus, Trash2 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
+import { EmptyState } from "@/components/empty-state"
+import { TableSkeletonRows } from "@/components/table-skeleton-rows"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -50,7 +52,7 @@ export function UsersPage() {
         </Button>
       </div>
 
-      <div className="rounded-md border">
+      <div className="rounded-xl border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -63,15 +65,21 @@ export function UsersPage() {
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  Loading...
-                </TableCell>
-              </TableRow>
+              <TableSkeletonRows columns={5} />
             ) : users.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                  No logins yet.
+                <TableCell colSpan={5}>
+                  <EmptyState
+                    icon={KeyRound}
+                    title="No logins yet"
+                    description="Create a login for an existing employee to give them access."
+                    action={
+                      <Button size="sm" className="mt-1" onClick={() => setDialogOpen(true)}>
+                        <Plus />
+                        Create login
+                      </Button>
+                    }
+                  />
                 </TableCell>
               </TableRow>
             ) : (

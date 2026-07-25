@@ -112,6 +112,8 @@ export interface PagedResult<T> {
   pageSize: number
 }
 
+export type EmployeeSortBy = "name" | "code" | "department" | "designation" | "status"
+
 export interface EmployeeListFilter {
   page: number
   pageSize: number
@@ -122,6 +124,8 @@ export interface EmployeeListFilter {
   department: string | null
   designation: string | null
   workLocation: string | null
+  sortBy: EmployeeSortBy | null
+  sortDescending: boolean
 }
 
 export interface RecentJoinee {

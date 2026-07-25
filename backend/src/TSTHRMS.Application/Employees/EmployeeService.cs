@@ -28,8 +28,7 @@ public class EmployeeService(
 
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
-            .OrderBy(e => e.LastName).ThenBy(e => e.FirstName)
+        var items = await ApplySort(query, filter)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Select(e => new EmployeeListItemDto(
@@ -44,8 +43,7 @@ public class EmployeeService(
     {
         var query = ApplyHrbpScope(ApplyFilter(dbContext.Employees.AsNoTracking(), filter));
 
-        var rows = await query
-            .OrderBy(e => e.LastName).ThenBy(e => e.FirstName)
+        var rows = await ApplySort(query, filter)
             .Select(e => new EmployeeListItemDto(
                 e.Id, e.EmployeeCode, e.FirstName, e.LastName,
                 e.LegalEntity!.Name, e.Product!.Name, e.Department, e.Designation, e.WorkLocation, e.Status))
@@ -104,6 +102,33 @@ public class EmployeeService(
         }
 
         return query;
+    }
+
+    /// <summary>Shared by the paged list and the export, same reasoning as ApplyFilter - an
+    /// unrecognized SortBy value falls back to the "name" default rather than throwing, since
+    /// this only ever changes display order.</summary>
+    private static IOrderedQueryable<Employee> ApplySort(IQueryable<Employee> query, EmployeeListFilter filter)
+    {
+        var descending = filter.SortDescending;
+
+        return filter.SortBy?.ToLowerInvariant() switch
+        {
+            "code" => descending
+                ? query.OrderByDescending(e => e.EmployeeCode)
+                : query.OrderBy(e => e.EmployeeCode),
+            "department" => descending
+                ? query.OrderByDescending(e => e.Department).ThenByDescending(e => e.LastName)
+                : query.OrderBy(e => e.Department).ThenBy(e => e.LastName),
+            "designation" => descending
+                ? query.OrderByDescending(e => e.Designation).ThenByDescending(e => e.LastName)
+                : query.OrderBy(e => e.Designation).ThenBy(e => e.LastName),
+            "status" => descending
+                ? query.OrderByDescending(e => e.Status).ThenByDescending(e => e.LastName)
+                : query.OrderBy(e => e.Status).ThenBy(e => e.LastName),
+            _ => descending
+                ? query.OrderByDescending(e => e.LastName).ThenByDescending(e => e.FirstName)
+                : query.OrderBy(e => e.LastName).ThenBy(e => e.FirstName),
+        };
     }
 
     /// <summary>An HRBP scoped to a legal entity and/or product only ever sees rows within that

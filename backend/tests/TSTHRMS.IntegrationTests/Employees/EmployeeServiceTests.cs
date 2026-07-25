@@ -236,6 +236,28 @@ public class EmployeeServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetList_sorts_by_the_requested_column_in_either_direction()
+    {
+        await using var context = CreateContext(_tenantId);
+        var service = CreateService(context, _tenantId);
+
+        await CreateEmployeeAsync(service, BuildRequest() with { FirstName = "Charlie", LastName = "Zeta", Designation = "Zebra" });
+        await CreateEmployeeAsync(service, BuildRequest() with { FirstName = "Alice", LastName = "Alpha", Designation = "Apple" });
+
+        var byCodeAscending = await service.GetListAsync(
+            new EmployeeListFilter(1, 50, null, null, null, null, null, null, null, SortBy: "code"));
+        Assert.Equal("EMP000001", byCodeAscending.Items[0].EmployeeCode);
+
+        var byCodeDescending = await service.GetListAsync(
+            new EmployeeListFilter(1, 50, null, null, null, null, null, null, null, SortBy: "code", SortDescending: true));
+        Assert.Equal("EMP000002", byCodeDescending.Items[0].EmployeeCode);
+
+        var byDesignation = await service.GetListAsync(
+            new EmployeeListFilter(1, 50, null, null, null, null, null, null, null, SortBy: "designation"));
+        Assert.Equal("Apple", byDesignation.Items[0].Designation);
+    }
+
+    [Fact]
     public async Task Hrbp_scoped_to_a_legal_entity_cannot_see_or_modify_employees_outside_it()
     {
         await using var context = CreateContext(_tenantId);

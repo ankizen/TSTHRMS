@@ -103,6 +103,9 @@ public record PagedResult<T>(IReadOnlyList<T> Items, int TotalCount, int Page, i
 
 /// <summary>Section 11: combinable filters shared by the list endpoint and the Excel export
 /// (export ignores Page/PageSize and returns every matching row).</summary>
+/// <summary>SortBy is one of "name" (default), "code", "department", "designation", "status" -
+/// unrecognized values fall back to "name" rather than erroring, since this only ever affects
+/// display order.</summary>
 public record EmployeeListFilter(
     int Page,
     int PageSize,
@@ -112,7 +115,9 @@ public record EmployeeListFilter(
     Guid? ProductId,
     string? Department,
     string? Designation,
-    string? WorkLocation);
+    string? WorkLocation,
+    string? SortBy = null,
+    bool SortDescending = false);
 
 /// <summary>Dashboard headline numbers - respects HRBP scope the same as everything else in this
 /// service, so a scoped HRBP sees counts for their assigned legal entity/product only.</summary>
