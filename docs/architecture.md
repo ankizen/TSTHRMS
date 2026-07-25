@@ -67,6 +67,16 @@ Implementation (`TSTHRMS.Infrastructure/Persistence/ApplicationDbContext.cs`):
 - Roles are fixed to the Core HR spec's 4 access levels: `HRAdmin`, `HRBP`, `Manager`, `Employee`
   (`TSTHRMS.Application/Common/RoleNames.cs`).
 
+## File storage
+
+`IFileStorageService` stores bytes behind an opaque, always-server-generated key (never a
+user-supplied path) so callers can't path-traverse and the implementation can swap from local
+disk to blob storage later without touching anything above the interface. `Document` (metadata:
+filename, content type, size, uploaded by/at) is deliberately generic - it's the seed of the
+full Document Repository (Core HR Section 10, a later slice); Education certificates are its
+first consumer. Production must point `FileStorage:RootPath` outside the deployed site folder
+(see the deployment runbook) so redeploys never delete uploaded files.
+
 ## Audit logging
 
 `AuditSaveChangesInterceptor` captures a field-level change record for every create/update/delete

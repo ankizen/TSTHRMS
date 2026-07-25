@@ -47,6 +47,13 @@ equivalent values as **environment variables** on the Application Pool
 | `ConnectionStrings__Default` | `Server=localhost;Port=3306;Database=tsthrms_prod;User=tsthrms_app;Password=<strong-generated-password>;` |
 | `Jwt__Key` | A random 64+ character secret (`openssl rand -base64 64`) - **different from dev** |
 | `Jwt__Issuer` / `Jwt__Audience` | Keep as `TSTHRMS` / `TSTHRMS.Client` unless you have a reason to change them |
+| `FileStorage__RootPath` | An **absolute path outside the site's physical path**, e.g. `D:\tsthrms-data\documents` - see note below |
+
+Uploaded files (education certificates, and more document types in later phases) are stored
+on disk at `FileStorage:RootPath`, which defaults to a relative `storage/uploads` folder. Point
+it at a location outside `C:\inetpub\tsthrms` in production - Step 5 (redeploying) overwrites
+the site's physical path, and a relative/in-place path would silently delete every uploaded
+file on the next release.
 
 Do not set `SeedAdmin__Email`/`SeedAdmin__Password` in production - the dev-only auto-seed
 block in `Program.cs` only runs `if (app.Environment.IsDevelopment())`. Create the first

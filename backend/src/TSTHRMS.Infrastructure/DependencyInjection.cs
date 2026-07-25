@@ -9,6 +9,7 @@ using TSTHRMS.Infrastructure.Auth;
 using TSTHRMS.Infrastructure.Identity;
 using TSTHRMS.Infrastructure.Persistence;
 using TSTHRMS.Infrastructure.Persistence.Interceptors;
+using TSTHRMS.Infrastructure.Storage;
 
 namespace TSTHRMS.Infrastructure;
 
@@ -53,6 +54,10 @@ public static class DependencyInjection
         services.AddScoped<JwtTokenGenerator>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmployeeService, EmployeeService>();
+
+        services.Configure<LocalFileStorageOptions>(configuration.GetSection(LocalFileStorageOptions.SectionName));
+        services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+        services.AddScoped<IEducationService, EducationService>();
 
         return services;
     }

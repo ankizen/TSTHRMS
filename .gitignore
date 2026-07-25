@@ -35,6 +35,5 @@ Thumbs.db
 .idea/
 *.swp
 
-# ---- Uploaded documents (local dev storage) ----
-backend/storage/
-storage/uploads/
+# ---- Uploaded documents (local dev storage - IFileStorageService RootPath) ----
+backend/src/TSTHRMS.Api/storage/

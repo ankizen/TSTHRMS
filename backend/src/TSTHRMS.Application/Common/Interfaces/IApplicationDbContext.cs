@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TSTHRMS.Domain.Auditing;
+using TSTHRMS.Domain.Documents;
 using TSTHRMS.Domain.Employees;
 using TSTHRMS.Domain.Tenancy;
 
@@ -12,6 +13,8 @@ public interface IApplicationDbContext
     DbSet<Product> Products { get; }
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<Employee> Employees { get; }
+    DbSet<EducationRecord> EducationRecords { get; }
+    DbSet<Document> Documents { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
