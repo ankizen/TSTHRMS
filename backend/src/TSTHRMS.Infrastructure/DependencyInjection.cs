@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TSTHRMS.Application.Auth;
 using TSTHRMS.Application.Common.Interfaces;
+using TSTHRMS.Application.Employees;
 using TSTHRMS.Infrastructure.Auth;
 using TSTHRMS.Infrastructure.Identity;
 using TSTHRMS.Infrastructure.Persistence;
@@ -33,6 +34,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<ApplicationDbContext>());
+        services.AddScoped<ISequenceGenerator, SequenceGenerator>();
 
         services
             .AddIdentityCore<ApplicationUser>(options =>
@@ -50,6 +52,7 @@ public static class DependencyInjection
         services.Configure<JwtSettings>(configuration.GetSection(JwtSettings.SectionName));
         services.AddScoped<JwtTokenGenerator>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IEmployeeService, EmployeeService>();
 
         return services;
     }

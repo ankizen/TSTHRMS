@@ -1,4 +1,4 @@
-import { LayoutDashboard } from "lucide-react"
+import { LayoutDashboard, Users } from "lucide-react"
 import { NavLink } from "react-router-dom"
 import {
   Sidebar,
@@ -12,7 +12,10 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const navItems = [{ title: "Dashboard", url: "/", icon: LayoutDashboard }]
+const navItems = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, end: true },
+  { title: "Employees", url: "/employees", icon: Users, end: false },
+]
 
 export function AppSidebar() {
   return (
@@ -33,7 +36,7 @@ export function AppSidebar() {
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
-                    <NavLink to={item.url} end>
+                    <NavLink to={item.url} end={item.end}>
                       <item.icon />
                       <span>{item.title}</span>
                     </NavLink>

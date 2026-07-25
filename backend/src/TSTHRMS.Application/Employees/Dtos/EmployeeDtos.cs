@@ -1,0 +1,74 @@
+using TSTHRMS.Domain.Employees;
+
+namespace TSTHRMS.Application.Employees.Dtos;
+
+public record EmployeeListItemDto(
+    Guid Id,
+    string EmployeeCode,
+    string FirstName,
+    string LastName,
+    string LegalEntityName,
+    string ProductName,
+    string? Department,
+    string? Designation,
+    EmployeeStatus Status);
+
+public record EmployeeDto(
+    Guid Id,
+    string EmployeeCode,
+    Guid LegalEntityId,
+    string LegalEntityName,
+    Guid ProductId,
+    string ProductName,
+    EmployeeStatus Status,
+    string FirstName,
+    string LastName,
+    Gender Gender,
+    DateOnly? DateOfBirth,
+    string? PersonalEmail,
+    string? PersonalPhone,
+    string? CurrentAddress,
+    string? PermanentAddress,
+    string? EmergencyContactName,
+    string? EmergencyContactRelation,
+    string? EmergencyContactPhone,
+    string? BankAccountNumberMasked,
+    string? BankIfscCode,
+    DateOnly DateOfJoining,
+    string? Designation,
+    string? Grade,
+    string? Department,
+    Guid? ReportingManagerId,
+    string? ReportingManagerName,
+    EmploymentType EmploymentType);
+
+public record EmployeeWriteRequest(
+    Guid LegalEntityId,
+    Guid ProductId,
+    string FirstName,
+    string LastName,
+    Gender Gender,
+    DateOnly? DateOfBirth,
+    string? PersonalEmail,
+    string? PersonalPhone,
+    string? CurrentAddress,
+    string? PermanentAddress,
+    string? EmergencyContactName,
+    string? EmergencyContactRelation,
+    string? EmergencyContactPhone,
+    string? BankAccountNumber,
+    string? BankIfscCode,
+    DateOnly DateOfJoining,
+    string? Designation,
+    string? Grade,
+    string? Department,
+    Guid? ReportingManagerId,
+    EmploymentType EmploymentType);
+
+public record UpdateEmployeeStatusRequest(EmployeeStatus Status);
+
+/// <summary>Wrapped so "employee not found" (null) is distinguishable from "found, but no
+/// bank account on file" (BankAccountNumber is null but the DTO itself is not).</summary>
+public record BankAccountRevealDto(string? BankAccountNumber);
+
+public record PagedResult<T>(IReadOnlyList<T> Items, int TotalCount, int Page, int PageSize);

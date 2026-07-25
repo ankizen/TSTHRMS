@@ -20,7 +20,9 @@ public enum AuditAction
 {
     Created,
     Updated,
-    Deleted
+    Deleted,
+    /// <summary>A [Sensitive] field was explicitly unmasked - Build Notes requires this be logged.</summary>
+    Revealed
 }
 
 public record AuditFieldChange(string PropertyName, string? OldValue, string? NewValue, bool IsSensitive);

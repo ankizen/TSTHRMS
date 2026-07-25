@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TSTHRMS.Application.Common.Interfaces;
 using TSTHRMS.Domain.Auditing;
 using TSTHRMS.Domain.Common;
+using TSTHRMS.Domain.Employees;
 using TSTHRMS.Domain.Tenancy;
 using TSTHRMS.Infrastructure.Identity;
 
@@ -22,6 +23,8 @@ public class ApplicationDbContext(
     public DbSet<LegalEntity> LegalEntities => Set<LegalEntity>();
     public DbSet<Product> Products => Set<Product>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<Employee> Employees => Set<Employee>();
+    public DbSet<TenantSequence> TenantSequences => Set<TenantSequence>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

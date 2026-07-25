@@ -1,3 +1,6 @@
+import { ArrowRight } from "lucide-react"
+import { Link } from "react-router-dom"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
@@ -18,14 +21,20 @@ export function DashboardPage() {
       </div>
       <Card>
         <CardHeader>
-          <CardTitle>Core HR is next</CardTitle>
+          <CardTitle>Core HR / Employee Database</CardTitle>
           <CardDescription>
-            Phase 0 (auth, multi-tenancy, app shell) is done. The Employee Database module
-            (Phase 1) will appear here once it&apos;s built.
+            The employee master record (personal, contact, and employment details) is live.
+            Education, family, documents, and the rest of the Core HR spec land in upcoming
+            slices.
           </CardDescription>
         </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Roles: {user?.roles.join(", ") || "-"}
+        <CardContent>
+          <Button asChild variant="outline">
+            <Link to="/employees">
+              Go to Employees
+              <ArrowRight />
+            </Link>
+          </Button>
         </CardContent>
       </Card>
     </div>
