@@ -9,7 +9,9 @@ using TSTHRMS.Application.CustomFields;
 using TSTHRMS.Application.Documents;
 using TSTHRMS.Application.Employees;
 using TSTHRMS.Application.Users;
+using TSTHRMS.Application.Recruitment;
 using TSTHRMS.Infrastructure.Auth;
+using TSTHRMS.Infrastructure.Email;
 using TSTHRMS.Infrastructure.Identity;
 using TSTHRMS.Infrastructure.Persistence;
 using TSTHRMS.Infrastructure.Persistence.Interceptors;
@@ -74,6 +76,12 @@ public static class DependencyInjection
         services.AddScoped<IMyProfileService, MyProfileService>();
         services.AddScoped<IEmployeeEditRequestService, EmployeeEditRequestService>();
         services.AddScoped<ICustomFieldService, CustomFieldService>();
+
+        services.Configure<SmtpOptions>(configuration.GetSection(SmtpOptions.SectionName));
+        services.AddScoped<IEmailSender, SmtpEmailSender>();
+        services.AddScoped<IJobRequisitionService, JobRequisitionService>();
+        services.AddScoped<ICareerSiteService, CareerSiteService>();
+        services.AddScoped<IApplicantService, ApplicantService>();
 
         return services;
     }

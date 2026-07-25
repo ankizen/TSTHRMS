@@ -7,6 +7,7 @@ using TSTHRMS.Domain.Common;
 using TSTHRMS.Domain.CustomFields;
 using TSTHRMS.Domain.Documents;
 using TSTHRMS.Domain.Employees;
+using TSTHRMS.Domain.Recruitment;
 using TSTHRMS.Domain.Tenancy;
 using TSTHRMS.Infrastructure.Identity;
 
@@ -39,6 +40,12 @@ public class ApplicationDbContext(
     public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
     public DbSet<EmployeeCustomFieldValue> EmployeeCustomFieldValues => Set<EmployeeCustomFieldValue>();
     public DbSet<TenantSequence> TenantSequences => Set<TenantSequence>();
+    public DbSet<JobRequisition> JobRequisitions => Set<JobRequisition>();
+    public DbSet<RequisitionApproval> RequisitionApprovals => Set<RequisitionApproval>();
+    public DbSet<JobPosting> JobPostings => Set<JobPosting>();
+    public DbSet<Candidate> Candidates => Set<Candidate>();
+    public DbSet<JobApplication> Applications => Set<JobApplication>();
+    public DbSet<ApplicationStageHistory> ApplicationStageHistories => Set<ApplicationStageHistory>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

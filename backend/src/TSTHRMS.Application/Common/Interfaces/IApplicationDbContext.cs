@@ -3,6 +3,7 @@ using TSTHRMS.Domain.Auditing;
 using TSTHRMS.Domain.CustomFields;
 using TSTHRMS.Domain.Documents;
 using TSTHRMS.Domain.Employees;
+using TSTHRMS.Domain.Recruitment;
 using TSTHRMS.Domain.Tenancy;
 
 namespace TSTHRMS.Application.Common.Interfaces;
@@ -24,6 +25,12 @@ public interface IApplicationDbContext
     DbSet<EmployeeEditRequest> EmployeeEditRequests { get; }
     DbSet<CustomFieldDefinition> CustomFieldDefinitions { get; }
     DbSet<EmployeeCustomFieldValue> EmployeeCustomFieldValues { get; }
+    DbSet<JobRequisition> JobRequisitions { get; }
+    DbSet<RequisitionApproval> RequisitionApprovals { get; }
+    DbSet<JobPosting> JobPostings { get; }
+    DbSet<Candidate> Candidates { get; }
+    DbSet<JobApplication> Applications { get; }
+    DbSet<ApplicationStageHistory> ApplicationStageHistories { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
