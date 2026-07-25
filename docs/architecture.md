@@ -12,7 +12,7 @@ today and is architected to be sold as a SaaS product to other companies without
 | Auth | ASP.NET Core Identity + JWT access token + rotating refresh token (HttpOnly cookie) |
 | Frontend | React 19 + TypeScript + Vite, Tailwind CSS + shadcn/ui, Lucide icons |
 | Data/forms | TanStack Query + TanStack Table, React Hook Form + Zod |
-| Hosting | Windows Server, IIS (ANCMv2 -> Kestrel), single origin (SPA + API on one site) |
+| Hosting | Either: Windows Server + IIS, single origin (`docs/deployment-windows-server-iis.md`); or Coolify (API + MySQL, Docker) + Vercel (SPA), split origins with CORS (`docs/deployment-coolify-vercel.md`) |
 
 **EF Core / Pomelo version note**: Pomelo's MySQL provider has not shipped EF Core 10 support
 yet, so the data-access layer is deliberately pinned to EF Core 9.0.x while the app itself runs

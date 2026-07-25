@@ -44,11 +44,24 @@ try
     builder.Services.AddOpenApi();
     builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
     builder.Services.AddProblemDetails();
+    builder.Services.AddHealthChecks();
+
+    // "Default" is what a split deployment (frontend on Vercel, API on Coolify - different
+    // origins) actually uses, driven by config (Cors:AllowedOrigins, e.g. env var
+    // Cors__AllowedOrigins__0) so the allowed origin never needs a code change. "LocalDev" stays
+    // hardcoded to the Vite dev server port since that's always the same locally.
+    var corsAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 
     builder.Services.AddCors(options =>
     {
         options.AddPolicy("LocalDev", policy => policy
             .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials());
+
+        options.AddPolicy("Default", policy => policy
+            .WithOrigins(corsAllowedOrigins)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials());
@@ -60,8 +73,17 @@ try
     {
         app.MapOpenApi();
         app.MapScalarApiReference();
-        app.UseCors("LocalDev");
+    }
 
+    app.UseCors(app.Environment.IsDevelopment() ? "LocalDev" : "Default");
+
+    // Runs in every environment (not just Development) so a fresh Coolify/container deploy
+    // comes up with an up-to-date schema and the initial HRAdmin seeded automatically -
+    // migrations are idempotent, so this is a no-op on every restart after the first. Disable
+    // via Database:MigrateOnStartup=false (e.g. env var Database__MigrateOnStartup) if migrations
+    // should instead run as a separate release step later.
+    if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
+    {
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await db.Database.MigrateAsync();
@@ -74,10 +96,12 @@ try
 
     app.UseExceptionHandler();
     app.UseHttpsRedirection();
+    app.MapHealthChecks("/health");
 
-    // Serves the built React SPA from wwwroot for single-origin production deployment
-    // (frontend/dist is copied there by the publish-time MSBuild target). No-op locally
-    // since wwwroot is empty during `dotnet run` - the Vite dev server serves the SPA instead.
+    // Serves the built React SPA from wwwroot for single-origin deployment (frontend/dist copied
+    // there by the publish-time MSBuild target - see docs/deployment-windows-server-iis.md).
+    // The Docker image (docs/deployment-coolify-vercel.md) skips that target, so wwwroot stays
+    // empty and this is a harmless no-op there too, same as it is locally under `dotnet run`.
     app.UseDefaultFiles();
     app.UseStaticFiles();
 

@@ -55,13 +55,15 @@ it at a location outside `C:\inetpub\tsthrms` in production - Step 5 (redeployin
 the site's physical path, and a relative/in-place path would silently delete every uploaded
 file on the next release.
 
-Do not set `SeedAdmin__Email`/`SeedAdmin__Password` in production - the dev-only auto-seed
-block in `Program.cs` only runs `if (app.Environment.IsDevelopment())`. Create the first
-production HR Admin user directly against the database (or add a one-time admin-provisioning
-endpoint/script before go-live) instead of relying on a seeded default password.
+Set `SeedAdmin__Email`/`SeedAdmin__Password` for the **first** deploy only - the seed step
+(`Program.cs`) runs in every environment now, but is a no-op once any tenant already exists, so
+it only ever creates the initial HR Admin account once. Use a strong, unique password here (not
+the dev default) and change it via the app after first login if you want it rotated.
 
-Set `ASPNETCORE_ENVIRONMENT=Production` on the app pool so the dev-only migrate/seed/Scalar/CORS
-block never runs on the server.
+Set `ASPNETCORE_ENVIRONMENT=Production` on the app pool so the dev-only Scalar/OpenAPI UI and the
+`LocalDev` CORS policy never activate on the server (see `Cors__AllowedOrigins__0` below if this
+site's frontend is ever served from a different origin than the API itself - not needed for the
+single-origin setup this doc describes).
 
 ## 3. Publish and deploy
 
@@ -77,21 +79,14 @@ This single command also builds the React app and copies it into `wwwroot` (see 
 everything needed: the API, its dependencies, and the compiled SPA.
 
 Copy the contents of `./publish` to the server's site path (`C:\inetpub\tsthrms`), for example
-via `robocopy`, a CI/CD artifact drop, or a zip deploy. Then:
+via `robocopy`, a CI/CD artifact drop, or a zip deploy, then recycle the app pool (or `iisreset`).
 
-```powershell
-# Apply any pending EF Core migrations against the production database
-cd C:\inetpub\tsthrms
-dotnet TSTHRMS.Api.dll --apply-migrations   # see note below
-```
-
-> Note: this project does not auto-migrate on startup outside Development (by design - schema
-> changes in production should be an explicit, reviewed step, not something that fires silently
-> whenever the app pool recycles). Run `dotnet ef database update` from a machine with network
-> access to the production database and the `Default` connection string configured, using the
-> same command as local dev (see root `README.md`), before swapping in a new deployment.
-
-Recycle the app pool (or `iisreset`) after copying new files.
+Pending EF Core migrations apply automatically on startup (`Program.cs` runs
+`db.Database.MigrateAsync()` in every environment, guarded by `Database:MigrateOnStartup`, default
+`true`) - idempotent, so this is a no-op on every recycle after the first time a given migration
+has applied. If you'd rather gate schema changes as an explicit, separately-reviewed step instead,
+set `Database__MigrateOnStartup=false` on the app pool and run `dotnet ef database update`
+yourself (same command as local dev, see root `README.md`) before swapping in a new deployment.
 
 ## 4. Verify
 

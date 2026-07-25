@@ -80,7 +80,10 @@ public class AuthController(IAuthService authService, IWebHostEnvironment enviro
         {
             HttpOnly = true,
             Secure = !environment.IsDevelopment(),
-            SameSite = SameSiteMode.Strict,
+            // A split deployment (frontend on Vercel, API elsewhere, e.g. Coolify) puts the two
+            // on different origins, and a cross-origin XHR never sends a Strict or Lax cookie at
+            // all - only None does, which itself requires Secure (already true outside dev).
+            SameSite = environment.IsDevelopment() ? SameSiteMode.Strict : SameSiteMode.None,
             Expires = DateTimeOffset.UtcNow.AddDays(7),
             Path = "/api/auth"
         });

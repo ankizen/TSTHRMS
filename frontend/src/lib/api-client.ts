@@ -6,8 +6,12 @@ interface RetryableRequestConfig extends InternalAxiosRequestConfig {
   _retry?: boolean
 }
 
+// Same-origin deployments (Vite dev proxy, or the API serving the built SPA from wwwroot) never
+// need this set - only a split deployment (frontend on Vercel, API elsewhere, e.g. Coolify) does.
+const API_BASE_URL = import.meta.env.VITE_API_URL || "/api"
+
 export const apiClient = axios.create({
-  baseURL: "/api",
+  baseURL: API_BASE_URL,
   withCredentials: true, // send the HttpOnly refresh cookie
 })
 
@@ -25,7 +29,7 @@ export async function refreshAccessToken(): Promise<string | null> {
   refreshPromise ??= (async () => {
     try {
       const { data } = await axios.post<LoginResponse>(
-        "/api/auth/refresh",
+        `${API_BASE_URL}/auth/refresh`,
         {},
         { withCredentials: true },
       )
