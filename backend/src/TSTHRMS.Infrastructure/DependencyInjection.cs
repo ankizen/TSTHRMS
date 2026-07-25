@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using TSTHRMS.Application.Auditing;
 using TSTHRMS.Application.Auth;
 using TSTHRMS.Application.Common.Interfaces;
 using TSTHRMS.Application.Documents;
@@ -64,6 +65,8 @@ public static class DependencyInjection
         services.AddScoped<IIdentityDocumentService, IdentityDocumentService>();
         services.AddScoped<INomineeService, NomineeService>();
         services.AddScoped<IDocumentRepositoryService, DocumentRepositoryService>();
+        services.AddScoped<IUserDirectory, UserDirectory>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
 
         return services;
     }

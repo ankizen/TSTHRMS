@@ -85,6 +85,16 @@ masking sensitive fields (bank details, PAN, Aadhaar - once Core HR adds them) i
 concern applied when the audit log is displayed, driven by the `[Sensitive]` attribute
 (`TSTHRMS.Domain/Common/SensitiveAttribute.cs`) rather than baked into storage.
 
+Each `AuditLog` row is keyed by the (`EntityName`, `EntityId`) of whatever row actually changed -
+a child record like an `EducationRecord` logs under its own id, not the employee's. The Change
+History screen (`AuditLogService.GetEmployeeHistoryAsync`) presents one unified per-employee
+timeline by first collecting the ids of every child record that belongs to the employee
+(education, family, previous employment, identity documents, nominees, standalone documents),
+then matching `AuditLog` rows against the employee's own id or any of those child ids. Sensitive
+field values come back masked; unmasking a specific entry goes through
+`AuditLogService.RevealEntryAsync`, which writes its own `Revealed` audit entry - the same
+"mask by default, reveal is an audited action" rule used for the bank account field.
+
 ## Reporting & export
 
 Employee list/export share one filter-building method (`EmployeeService.ApplyFilter`) so the
