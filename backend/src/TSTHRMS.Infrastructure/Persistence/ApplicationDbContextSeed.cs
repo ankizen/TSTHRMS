@@ -25,24 +25,34 @@ public static class ApplicationDbContextSeed
             }
         }
 
-        if (await context.Tenants.AnyAsync())
+        // Tenant seeding and admin-user seeding are deliberately independent idempotency checks,
+        // not one "if a tenant exists, the whole thing must have already succeeded" guard - the
+        // tenant is saved before the admin user is ever attempted, so if CreateAsync then fails
+        // (e.g. SeedAdmin:Password doesn't meet the password policy), a single combined guard
+        // would see the tenant already exists on every future restart and skip retrying the
+        // admin user forever, with no way to recover except editing the database by hand.
+        var tenant = await context.Tenants.FirstOrDefaultAsync();
+        if (tenant is null)
+        {
+            tenant = new Tenant { Name = "ThinkerSteps Group", Slug = "thinkersteps" };
+            context.Tenants.Add(tenant);
+
+            context.LegalEntities.AddRange(
+                new LegalEntity { TenantId = tenant.Id, Name = "The Thiinker" },
+                new LegalEntity { TenantId = tenant.Id, Name = "ThinkerSteps" });
+
+            context.Products.AddRange(
+                new Product { TenantId = tenant.Id, Name = "SwarnApp" },
+                new Product { TenantId = tenant.Id, Name = "JewelSteps" },
+                new Product { TenantId = tenant.Id, Name = "Miniz" });
+
+            await context.SaveChangesAsync();
+        }
+
+        if (await userManager.GetUsersInRoleAsync(RoleNames.HRAdmin) is { Count: > 0 })
         {
             return;
         }
-
-        var tenant = new Tenant { Name = "ThinkerSteps Group", Slug = "thinkersteps" };
-        context.Tenants.Add(tenant);
-
-        context.LegalEntities.AddRange(
-            new LegalEntity { TenantId = tenant.Id, Name = "The Thiinker" },
-            new LegalEntity { TenantId = tenant.Id, Name = "ThinkerSteps" });
-
-        context.Products.AddRange(
-            new Product { TenantId = tenant.Id, Name = "SwarnApp" },
-            new Product { TenantId = tenant.Id, Name = "JewelSteps" },
-            new Product { TenantId = tenant.Id, Name = "Miniz" });
-
-        await context.SaveChangesAsync();
 
         var adminEmail = configuration["SeedAdmin:Email"];
         var adminPassword = configuration["SeedAdmin:Password"];
