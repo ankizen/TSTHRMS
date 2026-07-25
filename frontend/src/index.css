@@ -123,12 +123,41 @@
     @apply border-border outline-ring/50;
     }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
     }
   html {
     @apply font-sans;
     }
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
+    @apply font-heading tracking-tight;
     }
+}
+
+@layer utilities {
+  /* Frosted-glass surface for the login hero's floating cards - subtle, not the whole app. */
+  .glass-card {
+    @apply rounded-2xl border border-white/10 bg-white/[0.06] backdrop-blur-md;
+  }
+
+  /* Faint grid, for a hero panel background - not meant to be legible detail, just texture. */
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+@theme inline {
+  --animate-float: float 6s ease-in-out infinite;
+  --animate-glow: glow 4s ease-in-out infinite;
+
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+  @keyframes glow {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.9; }
+  }
 }

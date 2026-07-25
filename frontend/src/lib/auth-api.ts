@@ -4,6 +4,7 @@ import type { LoginResponse } from "@/stores/auth-store"
 export interface LoginCredentials {
   email: string
   password: string
+  rememberMe?: boolean
 }
 
 export async function login(credentials: LoginCredentials): Promise<LoginResponse> {
