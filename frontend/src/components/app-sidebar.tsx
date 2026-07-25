@@ -1,5 +1,5 @@
 import { Building2, ClipboardCheck, KeyRound, LayoutDashboard, Network, SlidersHorizontal, UserCog, Users, UsersRound } from "lucide-react"
-import { NavLink } from "react-router-dom"
+import { NavLink, useLocation } from "react-router-dom"
 import {
   Sidebar,
   SidebarContent,
@@ -29,6 +29,9 @@ const navItems = [
 export function AppSidebar() {
   const roles = useAuthStore((s) => s.user?.roles ?? [])
   const visibleItems = navItems.filter((item) => !item.roles || item.roles.some((role) => roles.includes(role)))
+  const { pathname } = useLocation()
+  const isItemActive = (item: (typeof navItems)[number]) =>
+    item.end ? pathname === item.url : pathname.startsWith(item.url)
 
   return (
     <Sidebar collapsible="icon">
@@ -49,7 +52,7 @@ export function AppSidebar() {
             <SidebarMenu>
               {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild tooltip={item.title}>
+                  <SidebarMenuButton asChild tooltip={item.title} isActive={isItemActive(item)}>
                     <NavLink to={item.url} end={item.end}>
                       <item.icon />
                       <span>{item.title}</span>
