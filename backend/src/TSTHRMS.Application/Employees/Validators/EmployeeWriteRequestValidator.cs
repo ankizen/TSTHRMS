@@ -51,6 +51,7 @@ public class EmployeeWriteRequestValidator : AbstractValidator<EmployeeWriteRequ
             .When(x => x.DateOfBirthProofType is not null);
 
         RuleFor(x => x.ProfessionalTaxState).MaximumLength(100);
+        RuleFor(x => x.WorkLocation).MaximumLength(100);
 
         RuleFor(x => x.ContractEndDate)
             .GreaterThan(x => x.ContractStartDate)

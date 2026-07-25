@@ -32,6 +32,7 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(e => e.Designation).HasMaxLength(100);
         builder.Property(e => e.Grade).HasMaxLength(50);
         builder.Property(e => e.Department).HasMaxLength(100);
+        builder.Property(e => e.WorkLocation).HasMaxLength(100);
 
         builder.Property(e => e.MonthlyGrossSalary).HasPrecision(10, 2);
         builder.Property(e => e.DateOfBirthProofType).HasConversion<string>().HasMaxLength(30);
@@ -41,6 +42,9 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
 
         builder.HasIndex(e => new { e.TenantId, e.Status });
         builder.HasIndex(e => new { e.TenantId, e.LastName, e.FirstName });
+        builder.HasIndex(e => new { e.TenantId, e.Department });
+        builder.HasIndex(e => new { e.TenantId, e.Designation });
+        builder.HasIndex(e => new { e.TenantId, e.WorkLocation });
 
         builder.HasOne(e => e.LegalEntity)
             .WithMany()

@@ -6,7 +6,11 @@ namespace TSTHRMS.Application.Employees;
 public interface IEmployeeService
 {
     Task<PagedResult<EmployeeListItemDto>> GetListAsync(
-        int page, int pageSize, string? search, EmployeeStatus? status, CancellationToken cancellationToken = default);
+        EmployeeListFilter filter, CancellationToken cancellationToken = default);
+
+    /// <summary>Same filter semantics as <see cref="GetListAsync"/> but ignores paging and
+    /// returns every matching row as an .xlsx workbook.</summary>
+    Task<byte[]> ExportToExcelAsync(EmployeeListFilter filter, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<OrgChartNodeDto>> GetOrgChartAsync(
         Guid? legalEntityId, Guid? productId, CancellationToken cancellationToken = default);

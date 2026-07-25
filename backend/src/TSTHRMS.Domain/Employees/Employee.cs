@@ -44,6 +44,11 @@ public class Employee : TenantScopedEntity
     public string? Designation { get; set; }
     public string? Grade { get; set; }
     public string? Department { get; set; }
+
+    /// <summary>Work location (office/site) - used as a Section 11 filter criterion. Free text
+    /// rather than a fixed list, since office locations vary too much per company to enumerate.</summary>
+    public string? WorkLocation { get; set; }
+
     public Guid? ReportingManagerId { get; set; }
     public Employee? ReportingManager { get; set; }
     public EmploymentType EmploymentType { get; set; }

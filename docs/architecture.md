@@ -85,6 +85,13 @@ masking sensitive fields (bank details, PAN, Aadhaar - once Core HR adds them) i
 concern applied when the audit log is displayed, driven by the `[Sensitive]` attribute
 (`TSTHRMS.Domain/Common/SensitiveAttribute.cs`) rather than baked into storage.
 
+## Reporting & export
+
+Employee list/export share one filter-building method (`EmployeeService.ApplyFilter`) so the
+Excel export can never drift from what the paged list actually shows. Excel generation uses
+**ClosedXML** (MIT-licensed) rather than EPPlus, since EPPlus's non-commercial license would be a
+legal problem for a product sold to other companies.
+
 ## Roadmap
 
 Phase 0 (this foundation - auth, multi-tenancy, app shell) is done. Next is Phase 1, Core HR /

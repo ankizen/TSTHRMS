@@ -19,26 +19,12 @@ public class EmployeeService(
     ICurrentUserService currentUserService) : IEmployeeService
 {
     public async Task<PagedResult<EmployeeListItemDto>> GetListAsync(
-        int page, int pageSize, string? search, EmployeeStatus? status, CancellationToken cancellationToken = default)
+        EmployeeListFilter filter, CancellationToken cancellationToken = default)
     {
-        page = page < 1 ? 1 : page;
-        pageSize = pageSize is < 1 or > 200 ? 50 : pageSize;
+        var page = filter.Page < 1 ? 1 : filter.Page;
+        var pageSize = filter.PageSize is < 1 or > 200 ? 50 : filter.PageSize;
 
-        var query = dbContext.Employees.AsNoTracking();
-
-        if (status is not null)
-        {
-            query = query.Where(e => e.Status == status);
-        }
-
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim();
-            query = query.Where(e =>
-                EF.Functions.Like(e.FirstName, $"%{term}%") ||
-                EF.Functions.Like(e.LastName, $"%{term}%") ||
-                EF.Functions.Like(e.EmployeeCode, $"%{term}%"));
-        }
+        var query = ApplyFilter(dbContext.Employees.AsNoTracking(), filter);
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -48,10 +34,76 @@ public class EmployeeService(
             .Take(pageSize)
             .Select(e => new EmployeeListItemDto(
                 e.Id, e.EmployeeCode, e.FirstName, e.LastName,
-                e.LegalEntity!.Name, e.Product!.Name, e.Department, e.Designation, e.Status))
+                e.LegalEntity!.Name, e.Product!.Name, e.Department, e.Designation, e.WorkLocation, e.Status))
             .ToListAsync(cancellationToken);
 
         return new PagedResult<EmployeeListItemDto>(items, totalCount, page, pageSize);
+    }
+
+    public async Task<byte[]> ExportToExcelAsync(EmployeeListFilter filter, CancellationToken cancellationToken = default)
+    {
+        var query = ApplyFilter(dbContext.Employees.AsNoTracking(), filter);
+
+        var rows = await query
+            .OrderBy(e => e.LastName).ThenBy(e => e.FirstName)
+            .Select(e => new EmployeeListItemDto(
+                e.Id, e.EmployeeCode, e.FirstName, e.LastName,
+                e.LegalEntity!.Name, e.Product!.Name, e.Department, e.Designation, e.WorkLocation, e.Status))
+            .ToListAsync(cancellationToken);
+
+        return EmployeeExcelExporter.Export(rows);
+    }
+
+    /// <summary>Shared by the paged list and the (unpaged) Excel export so the two can never
+    /// silently drift apart on what "matches the current filter" means.</summary>
+    private static IQueryable<Employee> ApplyFilter(IQueryable<Employee> query, EmployeeListFilter filter)
+    {
+        if (filter.Status is not null)
+        {
+            query = query.Where(e => e.Status == filter.Status);
+        }
+
+        if (filter.LegalEntityId is not null)
+        {
+            query = query.Where(e => e.LegalEntityId == filter.LegalEntityId);
+        }
+
+        if (filter.ProductId is not null)
+        {
+            query = query.Where(e => e.ProductId == filter.ProductId);
+        }
+
+        // Partial-match (not equality) since these are free-text fields typed into a filter box,
+        // not selected from a fixed list - the same reasoning as WorkLocation's own field comment.
+        if (!string.IsNullOrWhiteSpace(filter.Department))
+        {
+            var term = filter.Department.Trim();
+            query = query.Where(e => e.Department != null && EF.Functions.Like(e.Department, $"%{term}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.Designation))
+        {
+            var term = filter.Designation.Trim();
+            query = query.Where(e => e.Designation != null && EF.Functions.Like(e.Designation, $"%{term}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.WorkLocation))
+        {
+            var term = filter.WorkLocation.Trim();
+            query = query.Where(e => e.WorkLocation != null && EF.Functions.Like(e.WorkLocation, $"%{term}%"));
+        }
+
+        if (!string.IsNullOrWhiteSpace(filter.Search))
+        {
+            var term = filter.Search.Trim();
+            query = query.Where(e =>
+                EF.Functions.Like(e.FirstName, $"%{term}%") ||
+                EF.Functions.Like(e.LastName, $"%{term}%") ||
+                EF.Functions.Like(e.EmployeeCode, $"%{term}%") ||
+                (e.PersonalEmail != null && EF.Functions.Like(e.PersonalEmail, $"%{term}%")));
+        }
+
+        return query;
     }
 
     public async Task<IReadOnlyList<OrgChartNodeDto>> GetOrgChartAsync(
@@ -118,6 +170,7 @@ public class EmployeeService(
             Designation = request.Designation,
             Grade = request.Grade,
             Department = request.Department,
+            WorkLocation = request.WorkLocation,
             ReportingManagerId = request.ReportingManagerId,
             EmploymentType = request.EmploymentType,
             MonthlyGrossSalary = request.MonthlyGrossSalary,
@@ -169,6 +222,7 @@ public class EmployeeService(
         employee.Designation = request.Designation;
         employee.Grade = request.Grade;
         employee.Department = request.Department;
+        employee.WorkLocation = request.WorkLocation;
         employee.ReportingManagerId = request.ReportingManagerId;
         employee.EmploymentType = request.EmploymentType;
         employee.MonthlyGrossSalary = request.MonthlyGrossSalary;
@@ -295,6 +349,7 @@ public class EmployeeService(
             e.Designation,
             e.Grade,
             e.Department,
+            e.WorkLocation,
             e.ReportingManagerId,
             e.ReportingManager is null ? null : $"{e.ReportingManager.FirstName} {e.ReportingManager.LastName}",
             e.EmploymentType,

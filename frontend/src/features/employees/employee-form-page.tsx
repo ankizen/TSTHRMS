@@ -70,6 +70,7 @@ const emptyValues: EmployeeFormValues = {
   designation: "",
   grade: "",
   department: "",
+  workLocation: "",
   reportingManagerId: "",
   employmentType: "FullTime",
   monthlyGrossSalary: null,
@@ -136,6 +137,7 @@ export function EmployeeFormPage() {
       designation: employee.designation ?? "",
       grade: employee.grade ?? "",
       department: employee.department ?? "",
+      workLocation: employee.workLocation ?? "",
       reportingManagerId: employee.reportingManagerId ?? "",
       employmentType: employee.employmentType,
       monthlyGrossSalary: employee.monthlyGrossSalary,
@@ -164,6 +166,7 @@ export function EmployeeFormPage() {
         designation: values.designation || null,
         grade: values.grade || null,
         department: values.department || null,
+        workLocation: values.workLocation || null,
         reportingManagerId: values.reportingManagerId || null,
         monthlyGrossSalary: values.monthlyGrossSalary ?? null,
         dateOfBirthProofType: values.dateOfBirthProofType || null,
@@ -416,6 +419,10 @@ export function EmployeeFormPage() {
           <div className="flex flex-col gap-2">
             <Label htmlFor="department">Department</Label>
             <Input id="department" {...register("department")} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="workLocation">Work Location</Label>
+            <Input id="workLocation" {...register("workLocation")} />
           </div>
           <div className="flex flex-col gap-2">
             <Label>Reporting manager</Label>

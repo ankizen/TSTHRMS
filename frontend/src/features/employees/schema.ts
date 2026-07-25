@@ -31,6 +31,7 @@ export const employeeFormSchema = z.object({
   designation: optionalText,
   grade: optionalText,
   department: optionalText,
+  workLocation: optionalText,
   reportingManagerId: optionalText,
   employmentType: z.enum(["FullTime", "Contract", "Intern"]),
   monthlyGrossSalary: z.number().min(0, "Can't be negative").optional().nullable(),

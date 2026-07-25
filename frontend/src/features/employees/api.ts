@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api-client"
 import type {
   ConfirmEmployeeRequest,
   Employee,
+  EmployeeListFilter,
   EmployeeListItem,
   EmployeeStatus,
   EmployeeWriteRequest,
@@ -9,16 +10,20 @@ import type {
   PagedResult,
 } from "./types"
 
-export interface EmployeeListParams {
-  page?: number
-  pageSize?: number
-  search?: string
-  status?: EmployeeStatus
+export async function getEmployees(filter: Partial<EmployeeListFilter>): Promise<PagedResult<EmployeeListItem>> {
+  const { data } = await apiClient.get<PagedResult<EmployeeListItem>>("/employees", { params: filter })
+  return data
 }
 
-export async function getEmployees(params: EmployeeListParams): Promise<PagedResult<EmployeeListItem>> {
-  const { data } = await apiClient.get<PagedResult<EmployeeListItem>>("/employees", { params })
-  return data
+/** Same filter as getEmployees but ignores paging - export always covers every matching row. */
+export async function exportEmployees(filter: Partial<EmployeeListFilter>): Promise<void> {
+  const response = await apiClient.get("/employees/export", { params: filter, responseType: "blob" })
+  const url = window.URL.createObjectURL(response.data as Blob)
+  const link = window.document.createElement("a")
+  link.href = url
+  link.download = `employees-${new Date().toISOString().slice(0, 10)}.xlsx`
+  link.click()
+  window.URL.revokeObjectURL(url)
 }
 
 export async function getEmployee(id: string): Promise<Employee> {

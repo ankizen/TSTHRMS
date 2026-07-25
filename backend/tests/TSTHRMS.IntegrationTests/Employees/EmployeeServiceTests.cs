@@ -173,6 +173,44 @@ public class EmployeeServiceTests : IAsyncLifetime
         Assert.True(created.IsContractExpiringSoon);
     }
 
+    [Fact]
+    public async Task GetList_combines_search_and_filters_and_export_matches_the_same_rows()
+    {
+        await using var context = CreateContext(_tenantId);
+        var service = CreateService(context, _tenantId);
+
+        var match = await service.CreateAsync(BuildRequest() with
+        {
+            FirstName = "Grace",
+            LastName = "Hopper",
+            PersonalEmail = "grace.hopper@example.com",
+            Department = "Engineering",
+            WorkLocation = "Mumbai HQ",
+        });
+        await service.CreateAsync(BuildRequest() with
+        {
+            FirstName = "Alan",
+            LastName = "Turing",
+            PersonalEmail = "alan.turing@example.com",
+            Department = "Research",
+            WorkLocation = "Pune Office",
+        });
+
+        var filter = new EmployeeListFilter(1, 50, "hopper", null, null, null, "Engineering", null, "Mumbai HQ");
+        var result = await service.GetListAsync(filter);
+
+        Assert.Single(result.Items);
+        Assert.Equal(match.Id, result.Items[0].Id);
+
+        var emailFilter = new EmployeeListFilter(1, 50, "alan.turing@example.com", null, null, null, null, null, null);
+        var emailResult = await service.GetListAsync(emailFilter);
+        Assert.Single(emailResult.Items);
+        Assert.Equal("Turing", emailResult.Items[0].LastName);
+
+        var exported = await service.ExportToExcelAsync(filter);
+        Assert.NotEmpty(exported);
+    }
+
     private EmployeeWriteRequest BuildRequest() => new(
         _legalEntityId,
         _productId,
@@ -193,6 +231,7 @@ public class EmployeeServiceTests : IAsyncLifetime
         "Engineer",
         "L3",
         "Engineering",
+        "Mumbai HQ",
         null,
         EmploymentType.FullTime,
         12000m,

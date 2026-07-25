@@ -11,6 +11,7 @@ public record EmployeeListItemDto(
     string ProductName,
     string? Department,
     string? Designation,
+    string? WorkLocation,
     EmployeeStatus Status);
 
 public record EmployeeDto(
@@ -38,6 +39,7 @@ public record EmployeeDto(
     string? Designation,
     string? Grade,
     string? Department,
+    string? WorkLocation,
     Guid? ReportingManagerId,
     string? ReportingManagerName,
     EmploymentType EmploymentType,
@@ -79,6 +81,7 @@ public record EmployeeWriteRequest(
     string? Designation,
     string? Grade,
     string? Department,
+    string? WorkLocation,
     Guid? ReportingManagerId,
     EmploymentType EmploymentType,
     decimal? MonthlyGrossSalary,
@@ -97,3 +100,16 @@ public record ConfirmEmployeeRequest(Guid ConfirmingManagerId, DateOnly? Confirm
 public record BankAccountRevealDto(string? BankAccountNumber);
 
 public record PagedResult<T>(IReadOnlyList<T> Items, int TotalCount, int Page, int PageSize);
+
+/// <summary>Section 11: combinable filters shared by the list endpoint and the Excel export
+/// (export ignores Page/PageSize and returns every matching row).</summary>
+public record EmployeeListFilter(
+    int Page,
+    int PageSize,
+    string? Search,
+    EmployeeStatus? Status,
+    Guid? LegalEntityId,
+    Guid? ProductId,
+    string? Department,
+    string? Designation,
+    string? WorkLocation);

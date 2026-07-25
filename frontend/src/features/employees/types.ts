@@ -18,6 +18,7 @@ export interface EmployeeListItem {
   productName: string
   department: string | null
   designation: string | null
+  workLocation: string | null
   status: EmployeeStatus
 }
 
@@ -46,6 +47,7 @@ export interface Employee {
   designation: string | null
   grade: string | null
   department: string | null
+  workLocation: string | null
   reportingManagerId: string | null
   reportingManagerName: string | null
   employmentType: EmploymentType
@@ -87,6 +89,7 @@ export interface EmployeeWriteRequest {
   designation: string | null
   grade: string | null
   department: string | null
+  workLocation: string | null
   reportingManagerId: string | null
   employmentType: EmploymentType
   monthlyGrossSalary: number | null
@@ -107,4 +110,16 @@ export interface PagedResult<T> {
   totalCount: number
   page: number
   pageSize: number
+}
+
+export interface EmployeeListFilter {
+  page: number
+  pageSize: number
+  search: string | null
+  status: EmployeeStatus | null
+  legalEntityId: string | null
+  productId: string | null
+  department: string | null
+  designation: string | null
+  workLocation: string | null
 }

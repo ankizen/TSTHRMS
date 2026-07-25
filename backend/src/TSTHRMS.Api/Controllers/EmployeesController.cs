@@ -16,14 +16,18 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
 
     [HttpGet]
     public async Task<ActionResult<PagedResult<EmployeeListItemDto>>> GetList(
-        [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 50,
-        [FromQuery] string? search = null,
-        [FromQuery] EmployeeStatus? status = null,
-        CancellationToken cancellationToken = default)
+        [FromQuery] EmployeeListFilter filter, CancellationToken cancellationToken = default)
     {
-        var result = await employeeService.GetListAsync(page, pageSize, search, status, cancellationToken);
+        var result = await employeeService.GetListAsync(filter, cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("export")]
+    public async Task<IActionResult> Export([FromQuery] EmployeeListFilter filter, CancellationToken cancellationToken)
+    {
+        var bytes = await employeeService.ExportToExcelAsync(filter, cancellationToken);
+        const string contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        return File(bytes, contentType, $"employees-{DateTime.UtcNow:yyyyMMdd-HHmmss}.xlsx");
     }
 
     [HttpGet("org-chart")]
