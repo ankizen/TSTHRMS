@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api-client"
 import type {
   ConfirmEmployeeRequest,
+  DashboardSummary,
   Employee,
   EmployeeListFilter,
   EmployeeListItem,
@@ -12,6 +13,11 @@ import type {
 
 export async function getEmployees(filter: Partial<EmployeeListFilter>): Promise<PagedResult<EmployeeListItem>> {
   const { data } = await apiClient.get<PagedResult<EmployeeListItem>>("/employees", { params: filter })
+  return data
+}
+
+export async function getDashboardSummary(): Promise<DashboardSummary> {
+  const { data } = await apiClient.get<DashboardSummary>("/employees/dashboard-summary")
   return data
 }
 

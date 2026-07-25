@@ -123,3 +123,20 @@ export interface EmployeeListFilter {
   designation: string | null
   workLocation: string | null
 }
+
+export interface RecentJoinee {
+  id: string
+  employeeCode: string
+  firstName: string
+  lastName: string
+  designation: string | null
+  department: string | null
+  dateOfJoining: string
+}
+
+export interface DashboardSummary {
+  totalEmployees: number
+  activeEmployees: number
+  departmentCount: number
+  recentJoinees: RecentJoinee[]
+}

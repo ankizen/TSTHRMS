@@ -213,6 +213,29 @@ public class EmployeeServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetDashboardSummary_counts_departments_and_orders_recent_joinees_by_date()
+    {
+        await using var context = CreateContext(_tenantId);
+        var service = CreateService(context, _tenantId);
+
+        var older = await CreateEmployeeAsync(service,
+            BuildRequest() with { FirstName = "Grace", LastName = "Hopper", Department = "Engineering", DateOfJoining = new DateOnly(2018, 1, 1) });
+        var newer = await CreateEmployeeAsync(service,
+            BuildRequest() with { FirstName = "Alan", LastName = "Turing", Department = "Engineering", DateOfJoining = new DateOnly(2023, 6, 1) });
+        var exited = await CreateEmployeeAsync(service,
+            BuildRequest() with { FirstName = "Old", LastName = "Timer", Department = "Research", DateOfJoining = new DateOnly(2010, 1, 1) });
+        await service.UpdateStatusAsync(exited.Id, EmployeeStatus.Exited);
+
+        var summary = await service.GetDashboardSummaryAsync();
+
+        Assert.Equal(3, summary.TotalEmployees);
+        Assert.Equal(2, summary.ActiveEmployees);
+        Assert.Equal(2, summary.DepartmentCount);
+        Assert.Equal(newer.Id, summary.RecentJoinees[0].Id);
+        Assert.Equal(older.Id, summary.RecentJoinees[1].Id);
+    }
+
+    [Fact]
     public async Task Hrbp_scoped_to_a_legal_entity_cannot_see_or_modify_employees_outside_it()
     {
         await using var context = CreateContext(_tenantId);

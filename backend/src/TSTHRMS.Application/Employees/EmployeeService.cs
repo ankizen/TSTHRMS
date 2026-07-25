@@ -364,6 +364,28 @@ public class EmployeeService(
         return new BankAccountRevealDto(employee.BankAccountNumber);
     }
 
+    public async Task<DashboardSummaryDto> GetDashboardSummaryAsync(CancellationToken cancellationToken = default)
+    {
+        var scoped = ApplyHrbpScope(dbContext.Employees.AsNoTracking());
+
+        var totalEmployees = await scoped.CountAsync(cancellationToken);
+        var activeEmployees = await scoped.CountAsync(e => e.Status == EmployeeStatus.Active, cancellationToken);
+        var departmentCount = await scoped
+            .Where(e => e.Department != null && e.Department != "")
+            .Select(e => e.Department)
+            .Distinct()
+            .CountAsync(cancellationToken);
+
+        var recentJoinees = await scoped
+            .OrderByDescending(e => e.DateOfJoining)
+            .Take(5)
+            .Select(e => new RecentJoineeDto(
+                e.Id, e.EmployeeCode, e.FirstName, e.LastName, e.Designation, e.Department, e.DateOfJoining))
+            .ToListAsync(cancellationToken);
+
+        return new DashboardSummaryDto(totalEmployees, activeEmployees, departmentCount, recentJoinees);
+    }
+
     private async Task<EmployeeDto> ToDtoAsync(Employee e, CancellationToken cancellationToken)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);

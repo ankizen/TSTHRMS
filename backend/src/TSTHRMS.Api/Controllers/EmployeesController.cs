@@ -27,6 +27,13 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
         return Ok(result);
     }
 
+    [HttpGet("dashboard-summary")]
+    public async Task<ActionResult<DashboardSummaryDto>> GetDashboardSummary(CancellationToken cancellationToken)
+    {
+        var summary = await employeeService.GetDashboardSummaryAsync(cancellationToken);
+        return Ok(summary);
+    }
+
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] EmployeeListFilter filter, CancellationToken cancellationToken)
     {

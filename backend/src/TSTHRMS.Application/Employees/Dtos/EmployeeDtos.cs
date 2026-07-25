@@ -113,3 +113,20 @@ public record EmployeeListFilter(
     string? Department,
     string? Designation,
     string? WorkLocation);
+
+/// <summary>Dashboard headline numbers - respects HRBP scope the same as everything else in this
+/// service, so a scoped HRBP sees counts for their assigned legal entity/product only.</summary>
+public record DashboardSummaryDto(
+    int TotalEmployees,
+    int ActiveEmployees,
+    int DepartmentCount,
+    IReadOnlyList<RecentJoineeDto> RecentJoinees);
+
+public record RecentJoineeDto(
+    Guid Id,
+    string EmployeeCode,
+    string FirstName,
+    string LastName,
+    string? Designation,
+    string? Department,
+    DateOnly DateOfJoining);
