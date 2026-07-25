@@ -29,11 +29,6 @@ public static class StatusPage
             background: radial-gradient(circle at 50% 0%, #e8f0fe, #f4f6fb);
             color: #0f172a;
           }
-          @media (prefers-color-scheme: dark) {
-            body { background: radial-gradient(circle at 50% 0%, #16213a, #0b1120); color: #e2e8f0; }
-            .card { background: #111827; box-shadow: 0 20px 45px rgba(0,0,0,0.45); }
-            .subtitle { color: #94a3b8; }
-          }
           .card {
             background: #ffffff;
             border-radius: 20px;
@@ -58,8 +53,18 @@ public static class StatusPage
             background: #22c55e;
             box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.18);
           }
-          h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.02em; }
+          h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.02em; color: #0f172a; }
           .subtitle { margin: 0; color: #64748b; font-size: 15px; }
+
+          /* Declared last on purpose - a rule earlier in the file with equal specificity (e.g.
+             the plain .card/.subtitle rules above) would otherwise win the cascade and silently
+             override these dark-mode colors back to their light-mode values. */
+          @media (prefers-color-scheme: dark) {
+            body { background: radial-gradient(circle at 50% 0%, #16213a, #0b1120); color: #e2e8f0; }
+            .card { background: #111827; box-shadow: 0 20px 45px rgba(0,0,0,0.45); }
+            h1 { color: #f8fafc; }
+            .subtitle { color: #94a3b8; }
+          }
         </style>
         </head>
         <body>
