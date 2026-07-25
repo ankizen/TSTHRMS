@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.Configure<LocalFileStorageOptions>(configuration.GetSection(LocalFileStorageOptions.SectionName));
         services.AddSingleton<IFileStorageService, LocalFileStorageService>();
         services.AddScoped<IEducationService, EducationService>();
+        services.AddScoped<IFamilyService, FamilyService>();
 
         return services;
     }

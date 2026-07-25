@@ -26,6 +26,7 @@ public class ApplicationDbContext(
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<Employee> Employees => Set<Employee>();
     public DbSet<EducationRecord> EducationRecords => Set<EducationRecord>();
+    public DbSet<FamilyMember> FamilyMembers => Set<FamilyMember>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<TenantSequence> TenantSequences => Set<TenantSequence>();
 

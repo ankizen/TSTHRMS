@@ -14,6 +14,7 @@ public interface IApplicationDbContext
     DbSet<AuditLog> AuditLogs { get; }
     DbSet<Employee> Employees { get; }
     DbSet<EducationRecord> EducationRecords { get; }
+    DbSet<FamilyMember> FamilyMembers { get; }
     DbSet<Document> Documents { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

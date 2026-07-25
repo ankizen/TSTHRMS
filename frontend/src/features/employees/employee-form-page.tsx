@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { EducationSection } from "./education/education-section"
+import { FamilySection } from "./family/family-section"
 import {
   createEmployee,
   getEmployee,
@@ -433,6 +434,7 @@ export function EmployeeFormPage() {
       </Card>
 
       {isEdit && id && <EducationSection employeeId={id} />}
+      {isEdit && id && <FamilySection employeeId={id} />}
 
       <Dialog open={revealedBankAccount !== null} onOpenChange={() => setRevealedBankAccount(null)}>
         <DialogContent>
