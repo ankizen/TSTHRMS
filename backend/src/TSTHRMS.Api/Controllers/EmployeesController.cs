@@ -26,6 +26,14 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
         return Ok(result);
     }
 
+    [HttpGet("org-chart")]
+    public async Task<ActionResult<IReadOnlyList<OrgChartNodeDto>>> GetOrgChart(
+        [FromQuery] Guid? legalEntityId, [FromQuery] Guid? productId, CancellationToken cancellationToken)
+    {
+        var nodes = await employeeService.GetOrgChartAsync(legalEntityId, productId, cancellationToken);
+        return Ok(nodes);
+    }
+
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<EmployeeDto>> GetById(Guid id, CancellationToken cancellationToken)
     {

@@ -8,6 +8,9 @@ public interface IEmployeeService
     Task<PagedResult<EmployeeListItemDto>> GetListAsync(
         int page, int pageSize, string? search, EmployeeStatus? status, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<OrgChartNodeDto>> GetOrgChartAsync(
+        Guid? legalEntityId, Guid? productId, CancellationToken cancellationToken = default);
+
     Task<EmployeeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<EmployeeDto> CreateAsync(EmployeeWriteRequest request, CancellationToken cancellationToken = default);

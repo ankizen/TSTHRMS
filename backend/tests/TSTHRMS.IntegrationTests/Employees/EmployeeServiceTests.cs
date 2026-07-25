@@ -101,6 +101,31 @@ public class EmployeeServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task GetOrgChart_excludes_exited_employees_and_honors_product_filter()
+    {
+        await using var context = CreateContext(_tenantId);
+        var service = CreateService(context, _tenantId);
+
+        var manager = await service.CreateAsync(BuildRequest() with { FirstName = "Grace", LastName = "Hopper" });
+        var report = await service.CreateAsync(
+            BuildRequest() with { FirstName = "Alan", LastName = "Turing", ReportingManagerId = manager.Id });
+        var exited = await service.CreateAsync(BuildRequest() with { FirstName = "Old", LastName = "Timer" });
+        await service.UpdateStatusAsync(exited.Id, EmployeeStatus.Exited);
+
+        var otherProduct = new TSTHRMS.Domain.Tenancy.Product { TenantId = _tenantId, Name = "Other Product" };
+        context.Products.Add(otherProduct);
+        await context.SaveChangesAsync();
+        await service.CreateAsync(BuildRequest() with { FirstName = "Off", LastName = "Chart", ProductId = otherProduct.Id });
+
+        var chart = await service.GetOrgChartAsync(null, _productId);
+
+        Assert.Contains(chart, n => n.Id == manager.Id);
+        Assert.Contains(chart, n => n.Id == report.Id && n.ReportingManagerId == manager.Id);
+        Assert.DoesNotContain(chart, n => n.Id == exited.Id);
+        Assert.DoesNotContain(chart, n => n.FullName == "Off Chart");
+    }
+
+    [Fact]
     public async Task Create_auto_calculates_probation_end_date_when_not_supplied()
     {
         await using var context = CreateContext(_tenantId);

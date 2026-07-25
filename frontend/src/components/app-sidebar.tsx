@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users } from "lucide-react"
+import { LayoutDashboard, Network, Users } from "lucide-react"
 import { NavLink } from "react-router-dom"
 import {
   Sidebar,
@@ -15,6 +15,7 @@ import {
 const navItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard, end: true },
   { title: "Employees", url: "/employees", icon: Users, end: false },
+  { title: "Org Chart", url: "/org-chart", icon: Network, end: false },
 ]
 
 export function AppSidebar() {

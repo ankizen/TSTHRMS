@@ -1,0 +1,56 @@
+/* Classic pure-CSS org chart connector lines (nested <ul>/<li>). Kept as plain CSS rather than
+   Tailwind utilities since the connectors rely on ::before/::after pseudo-elements with
+   percentage-based positioning that isn't practical to express as utility classes. */
+.org-tree,
+.org-tree ul {
+  padding-top: 20px;
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+.org-tree li {
+  list-style-type: none;
+  position: relative;
+  padding: 20px 8px 0 8px;
+}
+
+.org-tree li::before,
+.org-tree li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 50%;
+  border-top: 1px solid var(--border);
+  width: 50%;
+  height: 20px;
+}
+
+.org-tree li::after {
+  right: auto;
+  left: 50%;
+  border-left: 1px solid var(--border);
+}
+
+.org-tree li:only-child::after,
+.org-tree li:only-child::before {
+  display: none;
+}
+
+.org-tree li:first-child::before,
+.org-tree li:last-child::after {
+  border: 0 none;
+}
+
+.org-tree li:last-child::before {
+  border-right: 1px solid var(--border);
+}
+
+.org-tree > li {
+  padding-top: 0;
+}
+
+.org-tree > li::before,
+.org-tree > li::after {
+  display: none;
+}

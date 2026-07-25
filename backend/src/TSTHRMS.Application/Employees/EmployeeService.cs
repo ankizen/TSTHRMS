@@ -54,6 +54,31 @@ public class EmployeeService(
         return new PagedResult<EmployeeListItemDto>(items, totalCount, page, pageSize);
     }
 
+    public async Task<IReadOnlyList<OrgChartNodeDto>> GetOrgChartAsync(
+        Guid? legalEntityId, Guid? productId, CancellationToken cancellationToken = default)
+    {
+        // Exited employees are dropped from the chart; a still-active employee whose manager
+        // has exited (or fell outside the entity/product filter) just renders as a root node -
+        // simpler than trying to walk past a manager the chart can't show.
+        var query = dbContext.Employees.AsNoTracking().Where(e => e.Status != EmployeeStatus.Exited);
+
+        if (legalEntityId is not null)
+        {
+            query = query.Where(e => e.LegalEntityId == legalEntityId);
+        }
+
+        if (productId is not null)
+        {
+            query = query.Where(e => e.ProductId == productId);
+        }
+
+        return await query
+            .OrderBy(e => e.FirstName).ThenBy(e => e.LastName)
+            .Select(e => new OrgChartNodeDto(
+                e.Id, e.FirstName + " " + e.LastName, e.Designation, e.Department, e.ReportingManagerId, e.Status))
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<EmployeeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var employee = await dbContext.Employees
