@@ -46,6 +46,9 @@ public class ApplicationDbContext(
     public DbSet<Candidate> Candidates => Set<Candidate>();
     public DbSet<JobApplication> Applications => Set<JobApplication>();
     public DbSet<ApplicationStageHistory> ApplicationStageHistories => Set<ApplicationStageHistory>();
+    public DbSet<Interview> Interviews => Set<Interview>();
+    public DbSet<InterviewPanelist> InterviewPanelists => Set<InterviewPanelist>();
+    public DbSet<InterviewScorecard> InterviewScorecards => Set<InterviewScorecard>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

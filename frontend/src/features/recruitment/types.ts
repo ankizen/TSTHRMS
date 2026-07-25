@@ -136,4 +136,86 @@ export interface TalentPoolCandidate {
   mostRecentAppliedAt: string | null
 }
 
+export type InterviewRound = "InterviewRound1" | "InterviewRound2" | "InterviewRound3"
+export type InterviewStatus = "Scheduled" | "Completed" | "NoShow" | "Cancelled"
+export type InterviewRecommendation = "StrongYes" | "Yes" | "No" | "StrongNo"
+
+export interface ScheduleInterviewRequest {
+  round: InterviewRound
+  scheduledAt: string
+  durationMinutes: number
+  videoLink: string | null
+  panelistUserIds: string[]
+}
+
+export interface RescheduleInterviewRequest {
+  scheduledAt: string
+}
+
+export interface UpdateInterviewStatusRequest {
+  status: InterviewStatus
+}
+
+export interface SubmitScorecardRequest {
+  technicalSkillsRating: number
+  communicationRating: number
+  problemSolvingRating: number
+  cultureFitRating: number
+  recommendation: InterviewRecommendation
+  comments: string | null
+}
+
+export interface InterviewPanelist {
+  userId: string
+  displayName: string
+  hasSubmitted: boolean
+}
+
+export interface InterviewScorecard {
+  interviewerUserId: string
+  interviewerDisplayName: string
+  technicalSkillsRating: number
+  communicationRating: number
+  problemSolvingRating: number
+  cultureFitRating: number
+  recommendation: InterviewRecommendation
+  comments: string | null
+  submittedAt: string
+}
+
+export interface Interview {
+  id: string
+  applicationId: string
+  round: InterviewRound
+  scheduledAt: string
+  durationMinutes: number
+  videoLink: string | null
+  status: InterviewStatus
+  rescheduleCount: number
+  panelists: InterviewPanelist[]
+  visibleScorecards: InterviewScorecard[]
+  allScorecardsSubmitted: boolean
+  currentUserIsPanelist: boolean
+  currentUserHasSubmitted: boolean
+}
+
+export interface MyInterview {
+  interviewId: string
+  applicationId: string
+  candidateName: string
+  jobPostingTitle: string
+  round: InterviewRound
+  scheduledAt: string
+  durationMinutes: number
+  videoLink: string | null
+  status: InterviewStatus
+  hasSubmitted: boolean
+}
+
+export interface InterviewerCandidate {
+  userId: string
+  email: string
+  employeeName: string | null
+}
+
 export type { Lookup }

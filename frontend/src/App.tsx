@@ -15,6 +15,7 @@ import { MyProfilePage } from "@/features/my/my-profile-page"
 import { MyTeamPage } from "@/features/my/my-team-page"
 import { OrgChartPage } from "@/features/org-chart/org-chart-page"
 import { ApplicantsPage } from "@/features/recruitment/applicants-page"
+import { MyInterviewsPage } from "@/features/recruitment/my-interviews-page"
 import { RequisitionDetailPage } from "@/features/recruitment/requisition-detail-page"
 import { RequisitionsListPage } from "@/features/recruitment/requisitions-list-page"
 import { TalentPoolPage } from "@/features/recruitment/talent-pool-page"
@@ -54,6 +55,7 @@ export function App() {
         <Route path="/recruitment/talent-pool" element={<TalentPoolPage />} />
         <Route path="/my/profile" element={<MyProfilePage />} />
         <Route path="/my/team" element={<MyTeamPage />} />
+        <Route path="/my/interviews" element={<MyInterviewsPage />} />
         <Route path="/admin/users" element={<UsersPage />} />
         <Route path="/admin/edit-requests" element={<EditRequestsPage />} />
         <Route path="/admin/custom-fields" element={<CustomFieldsPage />} />

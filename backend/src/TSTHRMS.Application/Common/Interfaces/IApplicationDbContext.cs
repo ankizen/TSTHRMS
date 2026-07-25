@@ -31,6 +31,9 @@ public interface IApplicationDbContext
     DbSet<Candidate> Candidates { get; }
     DbSet<JobApplication> Applications { get; }
     DbSet<ApplicationStageHistory> ApplicationStageHistories { get; }
+    DbSet<Interview> Interviews { get; }
+    DbSet<InterviewPanelist> InterviewPanelists { get; }
+    DbSet<InterviewScorecard> InterviewScorecards { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

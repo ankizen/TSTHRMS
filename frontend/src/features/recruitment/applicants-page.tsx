@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { AlertCircle, ArrowLeft, Star, UsersRound } from "lucide-react"
+import { AlertCircle, ArrowLeft, CalendarClock, Star, UsersRound } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useNavigate, useParams } from "react-router-dom"
@@ -17,6 +17,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { getApplicants, moveApplicationStage, setTalentPool } from "./api"
 import { APPLICATION_STAGE_LABELS, APPLICATION_STAGE_OPTIONS } from "./constants"
+import { InterviewsSheet } from "./interviews-sheet"
 import { MoveStageDialog } from "./move-stage-dialog"
 import type { ApplicantListItem, ApplicationStage } from "./types"
 
@@ -29,6 +30,7 @@ export function ApplicantsPage() {
   const queryKey = ["recruitment", "job-postings", jobPostingId, "applicants"]
 
   const [pendingMove, setPendingMove] = useState<{ applicationId: string; stage: ApplicationStage } | null>(null)
+  const [interviewsFor, setInterviewsFor] = useState<{ applicationId: string; candidateName: string } | null>(null)
 
   const { data: applicants, isLoading } = useQuery({
     queryKey, queryFn: () => getApplicants(jobPostingId), enabled: Boolean(jobPostingId),
@@ -115,6 +117,12 @@ export function ApplicantsPage() {
                         isInTalentPool: !applicant.isInTalentPool,
                       })
                     }
+                    onOpenInterviews={() =>
+                      setInterviewsFor({
+                        applicationId: applicant.applicationId,
+                        candidateName: `${applicant.firstName} ${applicant.lastName}`,
+                      })
+                    }
                   />
                 ))}
               </div>
@@ -130,16 +138,23 @@ export function ApplicantsPage() {
         isSubmitting={moveMutation.isPending}
         targetStage={pendingMove?.stage ?? null}
       />
+
+      <InterviewsSheet
+        applicationId={interviewsFor?.applicationId ?? null}
+        candidateName={interviewsFor?.candidateName ?? null}
+        onOpenChange={(open) => !open && setInterviewsFor(null)}
+      />
     </div>
   )
 }
 
 function ApplicantCard({
-  applicant, onStageChange, onToggleTalentPool,
+  applicant, onStageChange, onToggleTalentPool, onOpenInterviews,
 }: {
   applicant: ApplicantListItem
   onStageChange: (stage: ApplicationStage) => void
   onToggleTalentPool: () => void
+  onOpenInterviews: () => void
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-xl border bg-card p-3 shadow-sm">
@@ -206,6 +221,11 @@ function ApplicantCard({
           ))}
         </SelectContent>
       </Select>
+
+      <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onOpenInterviews}>
+        <CalendarClock className="size-3.5" />
+        Interviews
+      </Button>
     </div>
   )
 }

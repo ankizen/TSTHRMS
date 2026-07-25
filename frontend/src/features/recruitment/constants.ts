@@ -1,4 +1,11 @@
-import type { ApplicationStage, RequisitionReason, RequisitionStatus } from "./types"
+import type {
+  ApplicationStage,
+  InterviewRecommendation,
+  InterviewRound,
+  InterviewStatus,
+  RequisitionReason,
+  RequisitionStatus,
+} from "./types"
 
 export const REQUISITION_REASON_OPTIONS: { value: RequisitionReason; label: string }[] = [
   { value: "Backfill", label: "Backfill" },
@@ -41,3 +48,34 @@ export const APPLICATION_STAGE_OPTIONS: { value: ApplicationStage; label: string
 export const APPLICATION_STAGE_LABELS: Record<ApplicationStage, string> = Object.fromEntries(
   APPLICATION_STAGE_OPTIONS.map((option) => [option.value, option.label]),
 ) as Record<ApplicationStage, string>
+
+export const INTERVIEW_ROUND_OPTIONS: { value: InterviewRound; label: string }[] = [
+  { value: "InterviewRound1", label: "Interview Round 1" },
+  { value: "InterviewRound2", label: "Interview Round 2" },
+  { value: "InterviewRound3", label: "Interview Round 3 (Final)" },
+]
+
+export const INTERVIEW_STATUS_LABELS: Record<InterviewStatus, string> = {
+  Scheduled: "Scheduled",
+  Completed: "Completed",
+  NoShow: "No-show",
+  Cancelled: "Cancelled",
+}
+
+export const INTERVIEW_STATUS_BADGE_VARIANT: Record<InterviewStatus, "default" | "secondary" | "outline" | "destructive"> = {
+  Scheduled: "default",
+  Completed: "secondary",
+  NoShow: "destructive",
+  Cancelled: "outline",
+}
+
+export const INTERVIEW_RECOMMENDATION_OPTIONS: { value: InterviewRecommendation; label: string }[] = [
+  { value: "StrongYes", label: "Strong Yes" },
+  { value: "Yes", label: "Yes" },
+  { value: "No", label: "No" },
+  { value: "StrongNo", label: "Strong No" },
+]
+
+export const INTERVIEW_RECOMMENDATION_LABELS: Record<InterviewRecommendation, string> = Object.fromEntries(
+  INTERVIEW_RECOMMENDATION_OPTIONS.map((option) => [option.value, option.label]),
+) as Record<InterviewRecommendation, string>

@@ -159,3 +159,58 @@ public record TalentPoolCandidateDto(
     string? MostRecentJobPostingTitle,
     ApplicationStage? MostRecentStage,
     DateTimeOffset? MostRecentAppliedAt);
+
+// ---- Interview Scheduling & Scorecards (Section 7) ----
+
+public record ScheduleInterviewRequest(
+    ApplicationStage Round, DateTimeOffset ScheduledAt, int DurationMinutes, string? VideoLink,
+    IReadOnlyList<Guid> PanelistUserIds);
+
+public record RescheduleInterviewRequest(DateTimeOffset ScheduledAt);
+
+public record UpdateInterviewStatusRequest(InterviewStatus Status);
+
+public record SubmitScorecardRequest(
+    int TechnicalSkillsRating, int CommunicationRating, int ProblemSolvingRating, int CultureFitRating,
+    InterviewRecommendation Recommendation, string? Comments);
+
+public record InterviewPanelistDto(Guid UserId, string DisplayName, bool HasSubmitted);
+
+/// <summary>Scorecard content is only ever populated in InterviewDto.Scorecards once every
+/// assigned panelist has submitted (Section 7 - "avoids one interviewer influencing another"),
+/// except the caller's own scorecard, which they can always see.</summary>
+public record InterviewScorecardDto(
+    Guid InterviewerUserId, string InterviewerDisplayName, int TechnicalSkillsRating, int CommunicationRating,
+    int ProblemSolvingRating, int CultureFitRating, InterviewRecommendation Recommendation, string? Comments,
+    DateTimeOffset SubmittedAt);
+
+public record InterviewDto(
+    Guid Id,
+    Guid ApplicationId,
+    ApplicationStage Round,
+    DateTimeOffset ScheduledAt,
+    int DurationMinutes,
+    string? VideoLink,
+    InterviewStatus Status,
+    int RescheduleCount,
+    IReadOnlyList<InterviewPanelistDto> Panelists,
+    IReadOnlyList<InterviewScorecardDto> VisibleScorecards,
+    bool AllScorecardsSubmitted,
+    bool CurrentUserIsPanelist,
+    bool CurrentUserHasSubmitted);
+
+/// <summary>The Section 14 self-service "Interviewer" view - what's assigned to me, across every
+/// requisition, regardless of whether I raised or can otherwise see the pipeline.</summary>
+public record MyInterviewDto(
+    Guid InterviewId,
+    Guid ApplicationId,
+    string CandidateName,
+    string JobPostingTitle,
+    ApplicationStage Round,
+    DateTimeOffset ScheduledAt,
+    int DurationMinutes,
+    string? VideoLink,
+    InterviewStatus Status,
+    bool HasSubmitted);
+
+public record InterviewerCandidateDto(Guid UserId, string Email, string? EmployeeName);

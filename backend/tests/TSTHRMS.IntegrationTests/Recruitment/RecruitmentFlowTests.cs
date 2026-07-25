@@ -5,6 +5,8 @@ using TSTHRMS.Application.Common;
 using TSTHRMS.Application.Common.Interfaces;
 using TSTHRMS.Application.Recruitment;
 using TSTHRMS.Application.Recruitment.Dtos;
+using TSTHRMS.Application.Users;
+using TSTHRMS.Application.Users.Dtos;
 using TSTHRMS.Domain.Recruitment;
 using TSTHRMS.Domain.Tenancy;
 using TSTHRMS.Infrastructure.Persistence;
@@ -199,6 +201,78 @@ public class RecruitmentFlowTests : IAsyncLifetime
         Assert.Contains(ownerList, r => r.Id == requisition.Id);
     }
 
+    [Fact]
+    public async Task Scorecard_visibility_is_gated_until_every_panelist_submits_except_for_HR_and_the_authors_own()
+    {
+        await using var context = CreateContext(_tenantId);
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Backend Engineer");
+
+        using var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray());
+        var applyRequest = new PublicApplicationRequest(
+            "Grace", "Hopper", "grace@example.com", "9999999997", null, null, null, true);
+        var applyResult = await careerSiteService.ApplyAsync(
+            posting.Slug, applyRequest, CandidateSource.CareerSite, resume, "resume.pdf", "application/pdf", resume.Length);
+        var applicationId = applyResult.ApplicationId!.Value;
+
+        var panelistA = Guid.NewGuid();
+        var panelistB = Guid.NewGuid();
+        var outsider = Guid.NewGuid();
+
+        var hrInterviewService = CreateInterviewService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var scheduled = await hrInterviewService.ScheduleAsync(
+            applicationId,
+            new ScheduleInterviewRequest(
+                ApplicationStage.InterviewRound1, DateTimeOffset.UtcNow.AddDays(1), 45, "https://meet.example.com/x",
+                [panelistA, panelistB]),
+            default);
+        Assert.NotNull(scheduled);
+
+        var panelistAService = CreateInterviewService(context, panelistA, []);
+        var panelistBService = CreateInterviewService(context, panelistB, []);
+        var outsiderService = CreateInterviewService(context, outsider, []);
+        var managerInterviewService = CreateInterviewService(context, _managerUserId, []);
+
+        // An unassigned user can't submit.
+        var blockedSubmit = await outsiderService.SubmitScorecardAsync(
+            scheduled!.Id, new SubmitScorecardRequest(4, 4, 4, 4, InterviewRecommendation.Yes, null));
+        Assert.Null(blockedSubmit);
+
+        await panelistAService.SubmitScorecardAsync(
+            scheduled.Id, new SubmitScorecardRequest(5, 4, 5, 4, InterviewRecommendation.StrongYes, "Great"));
+
+        // A repeat submission from the same panelist is rejected (append-only, no edits).
+        var duplicateSubmit = await panelistAService.SubmitScorecardAsync(
+            scheduled.Id, new SubmitScorecardRequest(1, 1, 1, 1, InterviewRecommendation.StrongNo, "Changed my mind"));
+        Assert.Null(duplicateSubmit);
+
+        var managerViewBeforeAllSubmitted = await managerInterviewService.GetForApplicationAsync(applicationId);
+        Assert.Empty(managerViewBeforeAllSubmitted!.Single().VisibleScorecards);
+
+        var hrViewBeforeAllSubmitted = await hrInterviewService.GetForApplicationAsync(applicationId);
+        Assert.Single(hrViewBeforeAllSubmitted!.Single().VisibleScorecards);
+
+        var panelistAOwnView = await panelistAService.GetForApplicationAsync(applicationId);
+        Assert.Single(panelistAOwnView!.Single().VisibleScorecards);
+
+        await panelistBService.SubmitScorecardAsync(
+            scheduled.Id, new SubmitScorecardRequest(3, 3, 3, 3, InterviewRecommendation.Yes, null));
+
+        var managerViewAfterAllSubmitted = await managerInterviewService.GetForApplicationAsync(applicationId);
+        Assert.Equal(2, managerViewAfterAllSubmitted!.Single().VisibleScorecards.Count);
+        Assert.True(managerViewAfterAllSubmitted!.Single().AllScorecardsSubmitted);
+
+        var myInterviews = await panelistAService.GetMyInterviewsAsync();
+        Assert.True(Assert.Single(myInterviews).HasSubmitted);
+    }
+
+    private InterviewService CreateInterviewService(ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles) =>
+        new(context, new TestCurrentUserService(userId, roles), new NoOpUserDirectory(), new NoOpUserManagementService(),
+            new NoOpEmailSender(), NullLogger<InterviewService>.Instance);
+
     private JobRequisitionWriteRequest BuildRequisitionRequest() => new(
         "Senior Engineer", _legalEntityId, _productId, "L4", "Engineering",
         Domain.Employees.EmploymentType.FullTime, 2, 1500000m,
@@ -240,6 +314,29 @@ public class RecruitmentFlowTests : IAsyncLifetime
     {
         public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+    }
+
+    /// <summary>Display-name lookups aren't asserted on in these tests - only that the right
+    /// scorecard rows are (in)visible - so a fixed placeholder is enough.</summary>
+    private class NoOpUserDirectory : IUserDirectory
+    {
+        public Task<IReadOnlyDictionary<Guid, string>> GetDisplayNamesAsync(
+            IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyDictionary<Guid, string>>(userIds.ToDictionary(id => id, _ => "Test User"));
+    }
+
+    /// <summary>Only GetInterviewerCandidatesAsync (not exercised by these tests) calls into
+    /// this - the other members exist solely to satisfy the interface.</summary>
+    private class NoOpUserManagementService : IUserManagementService
+    {
+        public Task<IReadOnlyList<UserSummaryDto>> GetListAsync(CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<UserSummaryDto>>([]);
+
+        public Task<UserCreationResult> CreateAsync(CreateUserRequest request, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
+
+        public Task<bool> DeleteAsync(Guid userId, CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 
     private class TestFileStorageOptions(string rootPath) : Microsoft.Extensions.Options.IOptions<LocalFileStorageOptions>

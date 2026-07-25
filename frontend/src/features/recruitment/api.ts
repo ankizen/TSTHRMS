@@ -1,13 +1,21 @@
 import { apiClient } from "@/lib/api-client"
 import type {
   ApplicantListItem,
+  Interview,
+  InterviewerCandidate,
+  InterviewScorecard,
   JobRequisition,
   JobRequisitionListItem,
   JobRequisitionWriteRequest,
   MoveApplicationStageRequest,
+  MyInterview,
   PublishJobPostingRequest,
   RequisitionStatus,
+  RescheduleInterviewRequest,
+  ScheduleInterviewRequest,
+  SubmitScorecardRequest,
   TalentPoolCandidate,
+  UpdateInterviewStatusRequest,
 } from "./types"
 
 export async function getRequisitions(status?: RequisitionStatus): Promise<JobRequisitionListItem[]> {
@@ -90,5 +98,40 @@ export async function getTalentPool(): Promise<TalentPoolCandidate[]> {
 
 export async function getCurrentTenant(): Promise<{ id: string; name: string; slug: string }> {
   const { data } = await apiClient.get<{ id: string; name: string; slug: string }>("/tenant/current")
+  return data
+}
+
+export async function getInterviews(applicationId: string): Promise<Interview[]> {
+  const { data } = await apiClient.get<Interview[]>(`/recruitment/applications/${applicationId}/interviews`)
+  return data
+}
+
+export async function scheduleInterview(applicationId: string, request: ScheduleInterviewRequest): Promise<Interview> {
+  const { data } = await apiClient.post<Interview>(`/recruitment/applications/${applicationId}/interviews`, request)
+  return data
+}
+
+export async function rescheduleInterview(interviewId: string, request: RescheduleInterviewRequest): Promise<Interview> {
+  const { data } = await apiClient.post<Interview>(`/recruitment/interviews/${interviewId}/reschedule`, request)
+  return data
+}
+
+export async function updateInterviewStatus(interviewId: string, request: UpdateInterviewStatusRequest): Promise<Interview> {
+  const { data } = await apiClient.post<Interview>(`/recruitment/interviews/${interviewId}/status`, request)
+  return data
+}
+
+export async function getInterviewerCandidates(): Promise<InterviewerCandidate[]> {
+  const { data } = await apiClient.get<InterviewerCandidate[]>("/recruitment/interviewer-candidates")
+  return data
+}
+
+export async function getMyInterviews(): Promise<MyInterview[]> {
+  const { data } = await apiClient.get<MyInterview[]>("/recruitment/my-interviews")
+  return data
+}
+
+export async function submitScorecard(interviewId: string, request: SubmitScorecardRequest): Promise<InterviewScorecard> {
+  const { data } = await apiClient.post<InterviewScorecard>(`/recruitment/my-interviews/${interviewId}/scorecard`, request)
   return data
 }
