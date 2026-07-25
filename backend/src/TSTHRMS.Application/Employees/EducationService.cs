@@ -7,7 +7,10 @@ using TSTHRMS.Domain.Employees;
 
 namespace TSTHRMS.Application.Employees;
 
-public class EducationService(IApplicationDbContext dbContext, IFileStorageService fileStorageService) : IEducationService
+public class EducationService(
+    IApplicationDbContext dbContext,
+    IFileStorageService fileStorageService,
+    ICurrentUserService currentUserService) : IEducationService
 {
     public async Task<IReadOnlyList<EducationRecordDto>> GetForEmployeeAsync(
         Guid employeeId, CancellationToken cancellationToken = default)
@@ -113,7 +116,7 @@ public class EducationService(IApplicationDbContext dbContext, IFileStorageServi
 
         record.CertificateDocument = await DocumentAttachmentHelper.SaveAndReplaceAsync(
             dbContext, fileStorageService, record.TenantId, record.CertificateDocumentId,
-            content, fileName, contentType, sizeBytes, cancellationToken);
+            content, fileName, contentType, sizeBytes, currentUserService.UserId, cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

@@ -4,6 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using TSTHRMS.Application.Auth;
 using TSTHRMS.Application.Common.Interfaces;
+using TSTHRMS.Application.Documents;
 using TSTHRMS.Application.Employees;
 using TSTHRMS.Infrastructure.Auth;
 using TSTHRMS.Infrastructure.Identity;
@@ -62,6 +63,7 @@ public static class DependencyInjection
         services.AddScoped<IPreviousEmploymentService, PreviousEmploymentService>();
         services.AddScoped<IIdentityDocumentService, IdentityDocumentService>();
         services.AddScoped<INomineeService, NomineeService>();
+        services.AddScoped<IDocumentRepositoryService, DocumentRepositoryService>();
 
         return services;
     }

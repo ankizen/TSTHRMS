@@ -107,7 +107,7 @@ public class IdentityDocumentService(
 
         document.ProofDocument = await DocumentAttachmentHelper.SaveAndReplaceAsync(
             dbContext, fileStorageService, document.TenantId, document.ProofDocumentId,
-            content, fileName, contentType, sizeBytes, cancellationToken);
+            content, fileName, contentType, sizeBytes, currentUserService.UserId, cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

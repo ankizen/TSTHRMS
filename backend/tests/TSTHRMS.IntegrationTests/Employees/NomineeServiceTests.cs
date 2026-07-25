@@ -163,7 +163,7 @@ public class NomineeServiceTests : IAsyncLifetime
     }
 
     private NomineeService CreateService(ApplicationDbContext context) =>
-        new(context, new LocalFileStorageService(new TestOptions(_storageRoot)));
+        new(context, new LocalFileStorageService(new TestOptions(_storageRoot)), new TestCurrentUserService());
 
     private ApplicationDbContext CreateContext(Guid tenantId)
     {

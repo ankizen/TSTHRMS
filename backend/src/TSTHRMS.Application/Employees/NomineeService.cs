@@ -7,7 +7,10 @@ using TSTHRMS.Domain.Employees;
 
 namespace TSTHRMS.Application.Employees;
 
-public class NomineeService(IApplicationDbContext dbContext, IFileStorageService fileStorageService) : INomineeService
+public class NomineeService(
+    IApplicationDbContext dbContext,
+    IFileStorageService fileStorageService,
+    ICurrentUserService currentUserService) : INomineeService
 {
     public async Task<IReadOnlyList<NomineeDto>> GetForEmployeeAsync(
         Guid employeeId, CancellationToken cancellationToken = default)
@@ -123,7 +126,7 @@ public class NomineeService(IApplicationDbContext dbContext, IFileStorageService
 
         nominee.ConsentDocument = await DocumentAttachmentHelper.SaveAndReplaceAsync(
             dbContext, fileStorageService, nominee.TenantId, nominee.ConsentDocumentId,
-            content, fileName, contentType, sizeBytes, cancellationToken);
+            content, fileName, contentType, sizeBytes, currentUserService.UserId, cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

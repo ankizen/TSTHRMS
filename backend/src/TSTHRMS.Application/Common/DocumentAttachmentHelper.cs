@@ -22,6 +22,7 @@ public static class DocumentAttachmentHelper
         string fileName,
         string contentType,
         long sizeBytes,
+        Guid? uploadedByUserId,
         CancellationToken cancellationToken)
     {
         var storageKey = await fileStorageService.SaveAsync(content, fileName, cancellationToken);
@@ -33,6 +34,7 @@ public static class DocumentAttachmentHelper
             ContentType = contentType,
             SizeBytes = sizeBytes,
             StorageKey = storageKey,
+            UploadedByUserId = uploadedByUserId,
             UploadedAt = DateTimeOffset.UtcNow
         };
 

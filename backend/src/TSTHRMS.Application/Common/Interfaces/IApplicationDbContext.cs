@@ -19,6 +19,7 @@ public interface IApplicationDbContext
     DbSet<IdentityDocument> IdentityDocuments { get; }
     DbSet<Nominee> Nominees { get; }
     DbSet<Document> Documents { get; }
+    DbSet<EmployeeDocument> EmployeeDocuments { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

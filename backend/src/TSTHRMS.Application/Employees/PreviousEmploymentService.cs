@@ -7,7 +7,10 @@ using TSTHRMS.Domain.Employees;
 
 namespace TSTHRMS.Application.Employees;
 
-public class PreviousEmploymentService(IApplicationDbContext dbContext, IFileStorageService fileStorageService)
+public class PreviousEmploymentService(
+    IApplicationDbContext dbContext,
+    IFileStorageService fileStorageService,
+    ICurrentUserService currentUserService)
     : IPreviousEmploymentService
 {
     public async Task<IReadOnlyList<PreviousEmploymentRecordDto>> GetForEmployeeAsync(
@@ -112,7 +115,7 @@ public class PreviousEmploymentService(IApplicationDbContext dbContext, IFileSto
 
         var document = await DocumentAttachmentHelper.SaveAndReplaceAsync(
             dbContext, fileStorageService, record.TenantId, previousDocumentId,
-            content, fileName, contentType, sizeBytes, cancellationToken);
+            content, fileName, contentType, sizeBytes, currentUserService.UserId, cancellationToken);
 
         switch (slot)
         {
