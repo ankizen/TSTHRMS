@@ -60,6 +60,8 @@ public static class DependencyInjection
         services.AddScoped<IEducationService, EducationService>();
         services.AddScoped<IFamilyService, FamilyService>();
         services.AddScoped<IPreviousEmploymentService, PreviousEmploymentService>();
+        services.AddScoped<IIdentityDocumentService, IdentityDocumentService>();
+        services.AddScoped<INomineeService, NomineeService>();
 
         return services;
     }

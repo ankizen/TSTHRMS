@@ -28,6 +28,8 @@ public class ApplicationDbContext(
     public DbSet<EducationRecord> EducationRecords => Set<EducationRecord>();
     public DbSet<FamilyMember> FamilyMembers => Set<FamilyMember>();
     public DbSet<PreviousEmploymentRecord> PreviousEmploymentRecords => Set<PreviousEmploymentRecord>();
+    public DbSet<IdentityDocument> IdentityDocuments => Set<IdentityDocument>();
+    public DbSet<Nominee> Nominees => Set<Nominee>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<TenantSequence> TenantSequences => Set<TenantSequence>();
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using TSTHRMS.Application.Common;
 using TSTHRMS.Application.Common.Interfaces;
 using TSTHRMS.Application.Employees.Dtos;
 using TSTHRMS.Domain.Auditing;
@@ -122,7 +123,15 @@ public class EmployeeService(
         employee.EmergencyContactName = request.EmergencyContactName;
         employee.EmergencyContactRelation = request.EmergencyContactRelation;
         employee.EmergencyContactPhone = request.EmergencyContactPhone;
-        employee.BankAccountNumber = request.BankAccountNumber;
+
+        // The UI shows this field masked/blank on edit (the real value is only ever fetched via
+        // the audited reveal action), so a blank submission means "unchanged", not "clear it" -
+        // otherwise every unrelated edit would silently wipe the bank account on save.
+        if (!string.IsNullOrWhiteSpace(request.BankAccountNumber))
+        {
+            employee.BankAccountNumber = request.BankAccountNumber;
+        }
+
         employee.BankIfscCode = request.BankIfscCode;
         employee.DateOfJoining = request.DateOfJoining;
         employee.Designation = request.Designation;
@@ -196,7 +205,7 @@ public class EmployeeService(
         e.EmergencyContactName,
         e.EmergencyContactRelation,
         e.EmergencyContactPhone,
-        MaskBankAccount(e.BankAccountNumber),
+        Masking.MaskLastFour(e.BankAccountNumber),
         e.BankIfscCode,
         e.DateOfJoining,
         e.Designation,
@@ -205,16 +214,4 @@ public class EmployeeService(
         e.ReportingManagerId,
         e.ReportingManager is null ? null : $"{e.ReportingManager.FirstName} {e.ReportingManager.LastName}",
         e.EmploymentType);
-
-    private static string? MaskBankAccount(string? value)
-    {
-        if (string.IsNullOrEmpty(value))
-        {
-            return value;
-        }
-
-        return value.Length <= 4
-            ? new string('•', value.Length)
-            : $"{new string('•', value.Length - 4)}{value[^4..]}";
-    }
 }
