@@ -19,4 +19,6 @@ public interface IEmployeeService
     /// <summary>Returns the unmasked bank account number and writes a logged Revealed audit entry.
     /// Null return means the employee wasn't found.</summary>
     Task<BankAccountRevealDto?> RevealBankAccountNumberAsync(Guid id, CancellationToken cancellationToken = default);
+
+    Task<EmployeeDto?> AcknowledgePoshPolicyAsync(Guid id, CancellationToken cancellationToken = default);
 }

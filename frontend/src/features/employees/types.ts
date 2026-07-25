@@ -1,6 +1,7 @@
 export type EmployeeStatus = "Active" | "OnLeave" | "NoticePeriod" | "Exited"
 export type Gender = "Male" | "Female" | "Other" | "PreferNotToSay"
 export type EmploymentType = "FullTime" | "Contract" | "Intern"
+export type DateOfBirthProofType = "Aadhaar" | "BirthCertificate" | "TenthMarksheet" | "Other"
 
 export interface Lookup {
   id: string
@@ -47,6 +48,14 @@ export interface Employee {
   reportingManagerId: string | null
   reportingManagerName: string | null
   employmentType: EmploymentType
+  monthlyGrossSalary: number | null
+  dateOfBirthProofType: DateOfBirthProofType | null
+  professionalTaxState: string | null
+  poshAcknowledgedAt: string | null
+  isPfApplicable: boolean
+  isEsicApplicable: boolean
+  isMaharashtraLwfEligible: boolean
+  hasMinorOrDifferentlyAbledDependent: boolean
 }
 
 export interface EmployeeWriteRequest {
@@ -71,6 +80,9 @@ export interface EmployeeWriteRequest {
   department: string | null
   reportingManagerId: string | null
   employmentType: EmploymentType
+  monthlyGrossSalary: number | null
+  dateOfBirthProofType: DateOfBirthProofType | null
+  professionalTaxState: string | null
 }
 
 export interface PagedResult<T> {

@@ -40,5 +40,16 @@ public class EmployeeWriteRequestValidator : AbstractValidator<EmployeeWriteRequ
             .NotEqual(Guid.Empty)
             .When(x => x.ReportingManagerId is not null)
             .WithMessage("Select a valid reporting manager.");
+
+        RuleFor(x => x.MonthlyGrossSalary)
+            .GreaterThanOrEqualTo(0)
+            .When(x => x.MonthlyGrossSalary is not null)
+            .WithMessage("Monthly gross salary can't be negative.");
+
+        RuleFor(x => x.DateOfBirthProofType)
+            .IsInEnum()
+            .When(x => x.DateOfBirthProofType is not null);
+
+        RuleFor(x => x.ProfessionalTaxState).MaximumLength(100);
     }
 }

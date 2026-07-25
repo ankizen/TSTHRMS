@@ -1,4 +1,4 @@
-import type { EmployeeStatus, EmploymentType, Gender } from "./types"
+import type { DateOfBirthProofType, EmployeeStatus, EmploymentType, Gender } from "./types"
 
 export const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: "Male", label: "Male" },
@@ -26,3 +26,30 @@ export const EMPLOYEE_STATUS_BADGE_VARIANT: Record<EmployeeStatus, "default" | "
   NoticePeriod: "outline",
   Exited: "destructive",
 }
+
+export const DATE_OF_BIRTH_PROOF_TYPE_OPTIONS: { value: DateOfBirthProofType; label: string }[] = [
+  { value: "Aadhaar", label: "Aadhaar" },
+  { value: "BirthCertificate", label: "Birth Certificate" },
+  { value: "TenthMarksheet", label: "10th Marksheet" },
+  { value: "Other", label: "Other" },
+]
+
+// Not exhaustive of every state/UT - covers the common ones; "Other" lets HR type anything else.
+export const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Bihar",
+  "Delhi",
+  "Gujarat",
+  "Haryana",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Punjab",
+  "Rajasthan",
+  "Tamil Nadu",
+  "Telangana",
+  "Uttar Pradesh",
+  "West Bengal",
+  "Other",
+]

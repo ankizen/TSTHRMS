@@ -47,6 +47,11 @@ export async function revealBankAccountNumber(id: string): Promise<string | null
   return data.bankAccountNumber
 }
 
+export async function acknowledgePoshPolicy(id: string): Promise<Employee> {
+  const { data } = await apiClient.post<Employee>(`/employees/${id}/posh-acknowledgment`)
+  return data
+}
+
 export async function getLegalEntities(): Promise<Lookup[]> {
   const { data } = await apiClient.get<Lookup[]>("/legal-entities")
   return data

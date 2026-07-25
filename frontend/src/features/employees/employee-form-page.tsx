@@ -5,6 +5,7 @@ import { useEffect, useState } from "react"
 import { Controller, useForm } from "react-hook-form"
 import { useNavigate, useParams } from "react-router-dom"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -29,6 +30,7 @@ import { IdentityDocumentSection } from "./identity-documents/identity-document-
 import { NomineeSection } from "./nominees/nominee-section"
 import { PreviousEmploymentSection } from "./previous-employment/previous-employment-section"
 import {
+  acknowledgePoshPolicy,
   createEmployee,
   getEmployee,
   getEmployees,
@@ -37,7 +39,12 @@ import {
   revealBankAccountNumber,
   updateEmployee,
 } from "./api"
-import { EMPLOYMENT_TYPE_OPTIONS, GENDER_OPTIONS } from "./constants"
+import {
+  DATE_OF_BIRTH_PROOF_TYPE_OPTIONS,
+  EMPLOYMENT_TYPE_OPTIONS,
+  GENDER_OPTIONS,
+  INDIAN_STATES,
+} from "./constants"
 import { employeeFormSchema, type EmployeeFormValues } from "./schema"
 import type { EmployeeWriteRequest } from "./types"
 
@@ -63,6 +70,9 @@ const emptyValues: EmployeeFormValues = {
   department: "",
   reportingManagerId: "",
   employmentType: "FullTime",
+  monthlyGrossSalary: null,
+  dateOfBirthProofType: null,
+  professionalTaxState: "",
 }
 
 export function EmployeeFormPage() {
@@ -122,6 +132,9 @@ export function EmployeeFormPage() {
       department: employee.department ?? "",
       reportingManagerId: employee.reportingManagerId ?? "",
       employmentType: employee.employmentType,
+      monthlyGrossSalary: employee.monthlyGrossSalary,
+      dateOfBirthProofType: employee.dateOfBirthProofType,
+      professionalTaxState: employee.professionalTaxState ?? "",
     })
   }, [employeeQuery.data, reset])
 
@@ -143,6 +156,9 @@ export function EmployeeFormPage() {
         grade: values.grade || null,
         department: values.department || null,
         reportingManagerId: values.reportingManagerId || null,
+        monthlyGrossSalary: values.monthlyGrossSalary ?? null,
+        dateOfBirthProofType: values.dateOfBirthProofType || null,
+        professionalTaxState: values.professionalTaxState || null,
       }
       return isEdit ? updateEmployee(id!, request) : createEmployee(request)
     },
@@ -162,6 +178,15 @@ export function EmployeeFormPage() {
     mutationFn: () => revealBankAccountNumber(id!),
     onSuccess: (bankAccountNumber) => setRevealedBankAccount(bankAccountNumber ?? "Not on file"),
     onError: () => toast.error("Couldn't reveal the bank account number."),
+  })
+
+  const poshMutation = useMutation({
+    mutationFn: () => acknowledgePoshPolicy(id!),
+    onSuccess: async () => {
+      toast.success("POSH policy acknowledgment recorded")
+      await queryClient.invalidateQueries({ queryKey: ["employee", id] })
+    },
+    onError: () => toast.error("Couldn't record the acknowledgment."),
   })
 
   const managerOptions = (managersQuery.data?.items ?? []).filter((employee) => employee.id !== id)
@@ -390,6 +415,115 @@ export function EmployeeFormPage() {
               )}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Statutory & Compliance</CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="monthlyGrossSalary">Monthly gross salary</Label>
+              <Input
+                id="monthlyGrossSalary"
+                type="number"
+                step="0.01"
+                {...register("monthlyGrossSalary", { valueAsNumber: true })}
+              />
+              {errors.monthlyGrossSalary && (
+                <p className="text-sm text-destructive">{errors.monthlyGrossSalary.message}</p>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Date of birth proof</Label>
+              <Controller
+                control={control}
+                name="dateOfBirthProofType"
+                render={({ field }) => (
+                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Not recorded" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DATE_OF_BIRTH_PROOF_TYPE_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Professional tax state</Label>
+              <Controller
+                control={control}
+                name="professionalTaxState"
+                render={({ field }) => (
+                  <Select value={field.value ?? ""} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Not set" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {INDIAN_STATES.map((state) => (
+                        <SelectItem key={state} value={state}>
+                          {state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+          </div>
+
+          {isEdit && employeeQuery.data && (
+            <div className="flex flex-col gap-3 border-t pt-4">
+              <div className="flex flex-wrap gap-2">
+                <Badge variant={employeeQuery.data.isPfApplicable ? "default" : "secondary"}>
+                  PF {employeeQuery.data.isPfApplicable ? "applicable" : "not applicable"}
+                </Badge>
+                <Badge variant={employeeQuery.data.isEsicApplicable ? "default" : "secondary"}>
+                  ESIC {employeeQuery.data.isEsicApplicable ? "applicable" : "not applicable"}
+                </Badge>
+                <Badge variant={employeeQuery.data.isMaharashtraLwfEligible ? "default" : "secondary"}>
+                  LWF {employeeQuery.data.isMaharashtraLwfEligible ? "eligible" : "not eligible"}
+                </Badge>
+                {employeeQuery.data.hasMinorOrDifferentlyAbledDependent && (
+                  <Badge variant="outline">Has minor/differently-abled dependent</Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                PF/ESIC/LWF are derived automatically from entity registration, salary, and PT
+                state - they aren&apos;t manually toggled. Verify LWF figures against the current
+                state notification before relying on them for filings.
+              </p>
+
+              <div className="flex items-center gap-2">
+                {employeeQuery.data.poshAcknowledgedAt ? (
+                  <Badge variant="default">
+                    POSH policy acknowledged {new Date(employeeQuery.data.poshAcknowledgedAt).toLocaleDateString()}
+                  </Badge>
+                ) : (
+                  <>
+                    <Badge variant="secondary">POSH policy not yet acknowledged</Badge>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => poshMutation.mutate()}
+                      disabled={poshMutation.isPending}
+                    >
+                      Record acknowledgment
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

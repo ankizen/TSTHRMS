@@ -33,6 +33,10 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.Property(e => e.Grade).HasMaxLength(50);
         builder.Property(e => e.Department).HasMaxLength(100);
 
+        builder.Property(e => e.MonthlyGrossSalary).HasPrecision(10, 2);
+        builder.Property(e => e.DateOfBirthProofType).HasConversion<string>().HasMaxLength(30);
+        builder.Property(e => e.ProfessionalTaxState).HasMaxLength(100);
+
         builder.HasIndex(e => new { e.TenantId, e.Status });
         builder.HasIndex(e => new { e.TenantId, e.LastName, e.FirstName });
 

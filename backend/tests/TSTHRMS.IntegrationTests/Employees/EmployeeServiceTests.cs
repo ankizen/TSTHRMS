@@ -121,7 +121,10 @@ public class EmployeeServiceTests : IAsyncLifetime
         "L3",
         "Engineering",
         null,
-        EmploymentType.FullTime);
+        EmploymentType.FullTime,
+        12000m,
+        DateOfBirthProofType.Aadhaar,
+        "Maharashtra");
 
     private static EmployeeService CreateService(ApplicationDbContext context, Guid tenantId) =>
         new(context, new SequenceGenerator(context, new TestTenantContext(tenantId)), new TestCurrentUserService());

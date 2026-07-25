@@ -63,7 +63,7 @@ public class EmployeeService(
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
-        return employee is null ? null : ToDto(employee);
+        return employee is null ? null : await ToDtoAsync(employee, cancellationToken);
     }
 
     public async Task<EmployeeDto> CreateAsync(EmployeeWriteRequest request, CancellationToken cancellationToken = default)
@@ -93,7 +93,10 @@ public class EmployeeService(
             Grade = request.Grade,
             Department = request.Department,
             ReportingManagerId = request.ReportingManagerId,
-            EmploymentType = request.EmploymentType
+            EmploymentType = request.EmploymentType,
+            MonthlyGrossSalary = request.MonthlyGrossSalary,
+            DateOfBirthProofType = request.DateOfBirthProofType,
+            ProfessionalTaxState = request.ProfessionalTaxState
         };
 
         dbContext.Employees.Add(employee);
@@ -139,7 +142,24 @@ public class EmployeeService(
         employee.Department = request.Department;
         employee.ReportingManagerId = request.ReportingManagerId;
         employee.EmploymentType = request.EmploymentType;
+        employee.MonthlyGrossSalary = request.MonthlyGrossSalary;
+        employee.DateOfBirthProofType = request.DateOfBirthProofType;
+        employee.ProfessionalTaxState = request.ProfessionalTaxState;
 
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return await GetByIdAsync(id, cancellationToken);
+    }
+
+    public async Task<EmployeeDto?> AcknowledgePoshPolicyAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var employee = await dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
+        if (employee is null)
+        {
+            return null;
+        }
+
+        employee.PoshAcknowledgedAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return await GetByIdAsync(id, cancellationToken);
@@ -186,32 +206,51 @@ public class EmployeeService(
         return new BankAccountRevealDto(employee.BankAccountNumber);
     }
 
-    private static EmployeeDto ToDto(Employee e) => new(
-        e.Id,
-        e.EmployeeCode,
-        e.LegalEntityId,
-        e.LegalEntity?.Name ?? string.Empty,
-        e.ProductId,
-        e.Product?.Name ?? string.Empty,
-        e.Status,
-        e.FirstName,
-        e.LastName,
-        e.Gender,
-        e.DateOfBirth,
-        e.PersonalEmail,
-        e.PersonalPhone,
-        e.CurrentAddress,
-        e.PermanentAddress,
-        e.EmergencyContactName,
-        e.EmergencyContactRelation,
-        e.EmergencyContactPhone,
-        Masking.MaskLastFour(e.BankAccountNumber),
-        e.BankIfscCode,
-        e.DateOfJoining,
-        e.Designation,
-        e.Grade,
-        e.Department,
-        e.ReportingManagerId,
-        e.ReportingManager is null ? null : $"{e.ReportingManager.FirstName} {e.ReportingManager.LastName}",
-        e.EmploymentType);
+    private async Task<EmployeeDto> ToDtoAsync(Employee e, CancellationToken cancellationToken)
+    {
+        var eighteenYearsAgo = DateOnly.FromDateTime(DateTime.UtcNow).AddYears(-18);
+
+        // Computed from Section 4 family data rather than stored redundantly - see Section 7's
+        // note that this flag "affects gratuity nomination" without needing its own input.
+        var hasMinorOrDifferentlyAbledDependent = await dbContext.FamilyMembers
+            .Where(f => f.EmployeeId == e.Id && f.IsDependent)
+            .AnyAsync(f => f.IsDifferentlyAbled || (f.DateOfBirth != null && f.DateOfBirth > eighteenYearsAgo), cancellationToken);
+
+        return new EmployeeDto(
+            e.Id,
+            e.EmployeeCode,
+            e.LegalEntityId,
+            e.LegalEntity?.Name ?? string.Empty,
+            e.ProductId,
+            e.Product?.Name ?? string.Empty,
+            e.Status,
+            e.FirstName,
+            e.LastName,
+            e.Gender,
+            e.DateOfBirth,
+            e.PersonalEmail,
+            e.PersonalPhone,
+            e.CurrentAddress,
+            e.PermanentAddress,
+            e.EmergencyContactName,
+            e.EmergencyContactRelation,
+            e.EmergencyContactPhone,
+            Masking.MaskLastFour(e.BankAccountNumber),
+            e.BankIfscCode,
+            e.DateOfJoining,
+            e.Designation,
+            e.Grade,
+            e.Department,
+            e.ReportingManagerId,
+            e.ReportingManager is null ? null : $"{e.ReportingManager.FirstName} {e.ReportingManager.LastName}",
+            e.EmploymentType,
+            e.MonthlyGrossSalary,
+            e.DateOfBirthProofType,
+            e.ProfessionalTaxState,
+            e.PoshAcknowledgedAt,
+            ComplianceRules.IsPfApplicable(e.LegalEntity?.IsPfRegistered ?? false, e.MonthlyGrossSalary),
+            ComplianceRules.IsEsicApplicable(e.LegalEntity?.IsEsicRegistered ?? false, e.MonthlyGrossSalary),
+            ComplianceRules.IsMaharashtraLwfEligible(e.ProfessionalTaxState, e.MonthlyGrossSalary),
+            hasMinorOrDifferentlyAbledDependent);
+    }
 }

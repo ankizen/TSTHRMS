@@ -33,6 +33,12 @@ export const employeeFormSchema = z.object({
   department: optionalText,
   reportingManagerId: optionalText,
   employmentType: z.enum(["FullTime", "Contract", "Intern"]),
+  monthlyGrossSalary: z.number().min(0, "Can't be negative").optional().nullable(),
+  dateOfBirthProofType: z
+    .enum(["Aadhaar", "BirthCertificate", "TenthMarksheet", "Other"])
+    .optional()
+    .nullable(),
+  professionalTaxState: optionalText,
 })
 
 export type EmployeeFormValues = z.infer<typeof employeeFormSchema>

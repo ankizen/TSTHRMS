@@ -40,7 +40,16 @@ public record EmployeeDto(
     string? Department,
     Guid? ReportingManagerId,
     string? ReportingManagerName,
-    EmploymentType EmploymentType);
+    EmploymentType EmploymentType,
+    decimal? MonthlyGrossSalary,
+    DateOfBirthProofType? DateOfBirthProofType,
+    string? ProfessionalTaxState,
+    DateTimeOffset? PoshAcknowledgedAt,
+    // Computed, not stored - see ComplianceRules for the derivation and its caveats.
+    bool IsPfApplicable,
+    bool IsEsicApplicable,
+    bool IsMaharashtraLwfEligible,
+    bool HasMinorOrDifferentlyAbledDependent);
 
 public record EmployeeWriteRequest(
     Guid LegalEntityId,
@@ -63,7 +72,10 @@ public record EmployeeWriteRequest(
     string? Grade,
     string? Department,
     Guid? ReportingManagerId,
-    EmploymentType EmploymentType);
+    EmploymentType EmploymentType,
+    decimal? MonthlyGrossSalary,
+    DateOfBirthProofType? DateOfBirthProofType,
+    string? ProfessionalTaxState);
 
 public record UpdateEmployeeStatusRequest(EmployeeStatus Status);
 

@@ -47,6 +47,13 @@ public class Employee : TenantScopedEntity
     public Guid? ReportingManagerId { get; set; }
     public Employee? ReportingManager { get; set; }
     public EmploymentType EmploymentType { get; set; }
+
+    // Statutory & Compliance (Section 7) - PF/ESIC/LWF applicability are computed from these
+    // plus LegalEntity registration flags, not stored as manually-toggled booleans.
+    public decimal? MonthlyGrossSalary { get; set; }
+    public DateOfBirthProofType? DateOfBirthProofType { get; set; }
+    public string? ProfessionalTaxState { get; set; }
+    public DateTimeOffset? PoshAcknowledgedAt { get; set; }
 }
 
 public enum Gender
@@ -70,4 +77,13 @@ public enum EmployeeStatus
     OnLeave,
     NoticePeriod,
     Exited
+}
+
+/// <summary>Which document was used to establish date of birth - required for PF and gratuity validity.</summary>
+public enum DateOfBirthProofType
+{
+    Aadhaar,
+    BirthCertificate,
+    TenthMarksheet,
+    Other
 }

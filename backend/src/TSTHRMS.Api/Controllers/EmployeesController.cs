@@ -65,4 +65,12 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
         var result = await employeeService.RevealBankAccountNumberAsync(id, cancellationToken);
         return result is null ? NotFound() : Ok(result);
     }
+
+    [HttpPost("{id:guid}/posh-acknowledgment")]
+    [Authorize(Roles = HrWriteRoles)]
+    public async Task<ActionResult<EmployeeDto>> AcknowledgePoshPolicy(Guid id, CancellationToken cancellationToken)
+    {
+        var employee = await employeeService.AcknowledgePoshPolicyAsync(id, cancellationToken);
+        return employee is null ? NotFound() : Ok(employee);
+    }
 }
