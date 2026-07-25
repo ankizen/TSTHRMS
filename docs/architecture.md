@@ -95,6 +95,19 @@ field values come back masked; unmasking a specific entry goes through
 `AuditLogService.RevealEntryAsync`, which writes its own `Revealed` audit entry - the same
 "mask by default, reveal is an audited action" rule used for the bank account field.
 
+## Bulk import
+
+`EmployeeBulkImportService` reads an uploaded .xlsx workbook (ClosedXML) and both validates and
+creates through the same code path: `ValidateAsync` (preview, no writes) and `CommitAsync`
+(creates every row that passes) share one parse-and-validate routine, then `CommitAsync` calls
+straight into `IEmployeeService.CreateAsync` per valid row rather than duplicating employee
+creation logic. Each row runs through the same `EmployeeWriteRequestValidator` used by the
+single-employee create endpoint, so business rules (IFSC format, DOB before DOJ, etc.) can't
+drift between the two paths. Deliberately covers a practical subset of fields, not the full
+`EmployeeWriteRequest` - reporting manager is left out, since resolving one by name would need a
+second pass (the manager might be in the same file) and isn't worth the complexity for a first
+cut; it can be set afterwards from the edit form.
+
 ## Reporting & export
 
 Employee list/export share one filter-building method (`EmployeeService.ApplyFilter`) so the

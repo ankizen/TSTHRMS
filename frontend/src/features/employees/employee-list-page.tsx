@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table"
-import { Download, Plus, Search } from "lucide-react"
+import { Download, Plus, Search, Upload } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { Link, useNavigate } from "react-router-dom"
@@ -104,6 +104,12 @@ export function EmployeeListPage() {
           <Button variant="outline" onClick={handleExport} disabled={isExporting}>
             <Download />
             {isExporting ? "Exporting..." : "Export to Excel"}
+          </Button>
+          <Button asChild variant="outline">
+            <Link to="/employees/bulk-import">
+              <Upload />
+              Bulk Import
+            </Link>
           </Button>
           <Button asChild>
             <Link to="/employees/new">
