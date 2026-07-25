@@ -14,8 +14,10 @@ public class IdentityDocumentConfiguration : IEntityTypeConfiguration<IdentityDo
         builder.Property(d => d.DocumentType).HasConversion<string>().HasMaxLength(20);
         builder.Property(d => d.Number).IsRequired().HasMaxLength(20);
 
-        // At most one document of a given type per employee.
-        builder.HasIndex(d => new { d.TenantId, d.EmployeeId, d.DocumentType }).IsUnique();
+        // Not unique: "at most one active document of a given type per employee" is enforced in
+        // IdentityDocumentService.CreateAsync instead, since a soft-deleted row (IsDeleted=true)
+        // would otherwise still occupy the slot - MySQL has no partial/filtered unique index.
+        builder.HasIndex(d => new { d.TenantId, d.EmployeeId, d.DocumentType });
 
         builder.HasOne(d => d.Employee)
             .WithMany()

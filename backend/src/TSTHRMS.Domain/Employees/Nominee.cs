@@ -8,7 +8,7 @@ namespace TSTHRMS.Domain.Employees;
 /// a nominee isn't always a family member. When one is, FamilyMemberId links back instead of
 /// duplicating name/relation entry (the "don't duplicate data entry" note from Section 4).
 /// </summary>
-public class Nominee : TenantScopedEntity
+public class Nominee : TenantScopedEntity, ISoftDeletable
 {
     public Guid EmployeeId { get; set; }
     public Employee? Employee { get; set; }
@@ -29,6 +29,9 @@ public class Nominee : TenantScopedEntity
     /// <summary>Form 2 equivalent - signature/consent upload.</summary>
     public Guid? ConsentDocumentId { get; set; }
     public Document? ConsentDocument { get; set; }
+
+    public bool IsDeleted { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
 }
 
 public enum NominationType

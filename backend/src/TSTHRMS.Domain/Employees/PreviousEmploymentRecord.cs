@@ -8,7 +8,7 @@ namespace TSTHRMS.Domain.Employees;
 /// slip are needed for PF transfer and background verification; previous UAN (if different)
 /// links the PF transfer-in.
 /// </summary>
-public class PreviousEmploymentRecord : TenantScopedEntity
+public class PreviousEmploymentRecord : TenantScopedEntity, ISoftDeletable
 {
     public Guid EmployeeId { get; set; }
     public Employee? Employee { get; set; }
@@ -26,6 +26,9 @@ public class PreviousEmploymentRecord : TenantScopedEntity
 
     public Guid? LastSalarySlipDocumentId { get; set; }
     public Document? LastSalarySlipDocument { get; set; }
+
+    public bool IsDeleted { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
 }
 
 public enum PreviousEmploymentDocumentSlot

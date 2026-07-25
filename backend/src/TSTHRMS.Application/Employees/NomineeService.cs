@@ -102,7 +102,8 @@ public class NomineeService(
             return false;
         }
 
-        dbContext.Nominees.Remove(nominee);
+        nominee.IsDeleted = true;
+        nominee.DeletedAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

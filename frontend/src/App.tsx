@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { Navigate, Route, Routes } from "react-router-dom"
 import { AppShell } from "@/components/app-shell"
 import { ProtectedRoute } from "@/components/protected-route"
+import { CustomFieldsPage } from "@/features/admin/custom-fields/custom-fields-page"
 import { EditRequestsPage } from "@/features/admin/edit-requests/edit-requests-page"
 import { UsersPage } from "@/features/admin/users/users-page"
 import { BulkImportPage } from "@/features/employees/bulk-import/bulk-import-page"
@@ -40,6 +41,7 @@ export function App() {
         <Route path="/my/team" element={<MyTeamPage />} />
         <Route path="/admin/users" element={<UsersPage />} />
         <Route path="/admin/edit-requests" element={<EditRequestsPage />} />
+        <Route path="/admin/custom-fields" element={<CustomFieldsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

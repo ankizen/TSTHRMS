@@ -8,7 +8,7 @@ namespace TSTHRMS.Domain.Employees;
 /// details (Section 6, a later slice) will link back to a FamilyMember by id rather than
 /// duplicating name/relation, but that link is added when Section 6 is built, not here.
 /// </summary>
-public class FamilyMember : TenantScopedEntity
+public class FamilyMember : TenantScopedEntity, ISoftDeletable
 {
     public Guid EmployeeId { get; set; }
     public Employee? Employee { get; set; }
@@ -18,6 +18,9 @@ public class FamilyMember : TenantScopedEntity
     public DateOnly? DateOfBirth { get; set; }
     public bool IsDependent { get; set; }
     public bool IsDifferentlyAbled { get; set; }
+
+    public bool IsDeleted { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
 }
 
 public enum FamilyRelation

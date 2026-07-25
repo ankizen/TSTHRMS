@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using TSTHRMS.Domain.Auditing;
+using TSTHRMS.Domain.CustomFields;
 using TSTHRMS.Domain.Documents;
 using TSTHRMS.Domain.Employees;
 using TSTHRMS.Domain.Tenancy;
@@ -21,6 +22,8 @@ public interface IApplicationDbContext
     DbSet<Document> Documents { get; }
     DbSet<EmployeeDocument> EmployeeDocuments { get; }
     DbSet<EmployeeEditRequest> EmployeeEditRequests { get; }
+    DbSet<CustomFieldDefinition> CustomFieldDefinitions { get; }
+    DbSet<EmployeeCustomFieldValue> EmployeeCustomFieldValues { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

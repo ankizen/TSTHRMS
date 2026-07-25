@@ -55,6 +55,26 @@ Implementation (`TSTHRMS.Infrastructure/Persistence/ApplicationDbContext.cs`):
 - The test that must never go red: `TSTHRMS.IntegrationTests/Persistence/TenantIsolationTests.cs`
   - asserts a query scoped to one tenant never returns another tenant's rows.
 
+## Soft delete (Section 15)
+
+Education, Family, Previous Employment, Identity Document, and Nominee records are never hard
+deleted - "delete" sets `IsDeleted`/`DeletedAt` (the `ISoftDeletable` marker interface) instead of
+removing the row. `ApplicationDbContext.OnModelCreating` folds `!IsDeleted` into the same
+reflection-driven global query filter used for tenant scoping, so a soft-deleted row disappears
+from every normal query (list views, the 100%-nominee-share sum, the dependent-flag lookup)
+without each call site needing to remember to check it - the same "impossible to forget" property
+multi-tenancy gets. Employee itself doesn't need the interface: it was already soft-delete-only
+via `EmployeeStatus.Exited`, no boolean flag required.
+
+One consequence: `IdentityDocument`'s "one document per type per employee" rule used to be a
+database unique index, but a soft-deleted row would still occupy that slot (MySQL has no
+partial/filtered unique index to exclude `IsDeleted` rows). It's enforced in
+`IdentityDocumentService.CreateAsync` instead, which already ran that check before the index
+existed. `AuditLogService` deliberately reaches past the filter (`IgnoreQueryFilters()`, with the
+tenant check re-applied by hand since ignoring filters drops both at once) when collecting an
+employee's related record ids, so a deleted record's edit history doesn't vanish from Change
+History along with it.
+
 ## Auth
 
 - Login returns a short-lived JWT access token (15 min) in the response body and sets the
@@ -98,6 +118,18 @@ its DTO-shaped children (`export`, `org-chart`, `audit-log`, `documents`) are re
   `IUserManagementService`/`UserManagementService` mirror the `IAuthService`/`AuthService` split
   (interface in Application, `UserManager<ApplicationUser>`-backed implementation in
   Infrastructure) since only Infrastructure may reference Identity types.
+
+## Custom fields (Section 15)
+
+`CustomFieldDefinition` (tenant-scoped config: name, label, type, options, required, display
+order) lets HR add employee fields without a code change; `EmployeeCustomFieldValue` stores the
+per-employee value against a definition. Value storage is a plain string regardless of
+`FieldType` (`Text`/`Number`/`Date`/`Boolean`/`Select`) - the type only drives how the frontend
+renders and validates the input, the same approach `EmployeeEditRequest.NewValue` already uses.
+`CustomFieldService.SetValuesForEmployeeAsync` upserts in one batch and silently ignores any
+definition id that no longer exists, so a field deleted after the form loaded doesn't block saving
+the rest of the submission. Deleting a definition cascades its values - this is admin config
+metadata, not employee data, so Section 15's soft-delete rule doesn't apply here.
 
 ## File storage
 

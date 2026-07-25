@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { AuditLogSection } from "./audit-log/audit-log-section"
+import { CustomFieldsSection } from "./custom-fields/custom-fields-section"
 import { DocumentRepositorySection } from "./documents/document-repository-section"
 import { EducationSection } from "./education/education-section"
 import { FamilySection } from "./family/family-section"
@@ -678,6 +679,7 @@ export function EmployeeFormPage() {
       {isEdit && id && <IdentityDocumentSection employeeId={id} />}
       {isEdit && id && <NomineeSection employeeId={id} />}
       {isEdit && id && <DocumentRepositorySection employeeId={id} />}
+      {isEdit && id && <CustomFieldsSection employeeId={id} />}
       {isEdit && id && <AuditLogSection employeeId={id} />}
 
       <Dialog open={revealedBankAccount !== null} onOpenChange={() => setRevealedBankAccount(null)}>

@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using TSTHRMS.Application.Auditing;
 using TSTHRMS.Application.Auth;
 using TSTHRMS.Application.Common.Interfaces;
+using TSTHRMS.Application.CustomFields;
 using TSTHRMS.Application.Documents;
 using TSTHRMS.Application.Employees;
 using TSTHRMS.Application.Users;
@@ -72,6 +73,7 @@ public static class DependencyInjection
         services.AddScoped<IUserManagementService, UserManagementService>();
         services.AddScoped<IMyProfileService, MyProfileService>();
         services.AddScoped<IEmployeeEditRequestService, EmployeeEditRequestService>();
+        services.AddScoped<ICustomFieldService, CustomFieldService>();
 
         return services;
     }

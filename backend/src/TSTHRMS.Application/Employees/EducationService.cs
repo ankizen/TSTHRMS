@@ -77,7 +77,8 @@ public class EducationService(
             return false;
         }
 
-        dbContext.EducationRecords.Remove(record);
+        record.IsDeleted = true;
+        record.DeletedAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

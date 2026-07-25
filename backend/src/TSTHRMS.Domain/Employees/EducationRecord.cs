@@ -8,7 +8,7 @@ namespace TSTHRMS.Domain.Employees;
 /// than one (graduation + post-graduation etc.), so this is its own table, not flat columns
 /// on Employee.
 /// </summary>
-public class EducationRecord : TenantScopedEntity
+public class EducationRecord : TenantScopedEntity, ISoftDeletable
 {
     public Guid EmployeeId { get; set; }
     public Employee? Employee { get; set; }
@@ -23,6 +23,9 @@ public class EducationRecord : TenantScopedEntity
     public Document? CertificateDocument { get; set; }
 
     public VerificationStatus VerificationStatus { get; set; } = VerificationStatus.Pending;
+
+    public bool IsDeleted { get; set; }
+    public DateTimeOffset? DeletedAt { get; set; }
 }
 
 /// <summary>Ordered lowest to highest so "highest first" sort is just an enum-value ORDER BY DESC.</summary>

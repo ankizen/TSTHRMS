@@ -1,4 +1,4 @@
-import { ClipboardCheck, KeyRound, LayoutDashboard, Network, UserCog, Users, UsersRound } from "lucide-react"
+import { ClipboardCheck, KeyRound, LayoutDashboard, Network, SlidersHorizontal, UserCog, Users, UsersRound } from "lucide-react"
 import { NavLink } from "react-router-dom"
 import {
   Sidebar,
@@ -23,6 +23,7 @@ const navItems = [
   { title: "My Team", url: "/my/team", icon: UsersRound, end: false, roles: ["Manager"] },
   { title: "Edit Requests", url: "/admin/edit-requests", icon: ClipboardCheck, end: false, roles: ["HRAdmin", "HRBP"] },
   { title: "Users", url: "/admin/users", icon: KeyRound, end: false, roles: ["HRAdmin"] },
+  { title: "Custom Fields", url: "/admin/custom-fields", icon: SlidersHorizontal, end: false, roles: ["HRAdmin"] },
 ] as const
 
 export function AppSidebar() {

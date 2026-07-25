@@ -155,8 +155,8 @@ public class AuditLogServiceTests : IAsyncLifetime
         Assert.Single(revealLogs);
     }
 
-    private static AuditLogService CreateAuditLogService(ApplicationDbContext context) =>
-        new(context, new TestCurrentUserService(), new TestUserDirectory());
+    private AuditLogService CreateAuditLogService(ApplicationDbContext context) =>
+        new(context, new TestTenantContext(_tenantId), new TestCurrentUserService(), new TestUserDirectory());
 
     private ApplicationDbContext CreateContext(Guid tenantId)
     {

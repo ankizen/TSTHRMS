@@ -119,6 +119,32 @@ public class IdentityDocumentServiceTests : IAsyncLifetime
         Assert.Single(auditLogs);
     }
 
+    [Fact]
+    public async Task Delete_soft_deletes_so_a_new_document_of_the_same_type_can_be_added_afterward()
+    {
+        await using var context = CreateContext(_tenantId);
+        var service = CreateService(context);
+
+        var first = await service.CreateAsync(
+            _employeeId, new IdentityDocumentWriteRequest(IdentityDocumentType.Pan, "ABCDE1234F", null));
+
+        var deleted = await service.DeleteAsync(_employeeId, first!.Record!.Id);
+        Assert.True(deleted);
+
+        var afterDelete = await service.GetForEmployeeAsync(_employeeId);
+        Assert.Empty(afterDelete);
+
+        // The old DB unique index would have blocked this - it's gone now that delete is soft.
+        var second = await service.CreateAsync(
+            _employeeId, new IdentityDocumentWriteRequest(IdentityDocumentType.Pan, "ZZZZZ9999Z", null));
+        Assert.True(second!.Succeeded);
+
+        var deletedRowStillExists = await context.IdentityDocuments
+            .IgnoreQueryFilters()
+            .AnyAsync(d => d.Id == first.Record.Id && d.IsDeleted);
+        Assert.True(deletedRowStillExists);
+    }
+
     private IdentityDocumentService CreateService(ApplicationDbContext context) =>
         new(context, new LocalFileStorageService(new TestOptions(_storageRoot)), new TestCurrentUserService());
 

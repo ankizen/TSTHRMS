@@ -83,7 +83,8 @@ public class PreviousEmploymentService(
             return false;
         }
 
-        dbContext.PreviousEmploymentRecords.Remove(record);
+        record.IsDeleted = true;
+        record.DeletedAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

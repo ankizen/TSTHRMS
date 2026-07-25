@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TSTHRMS.Application.Common.Interfaces;
 using TSTHRMS.Domain.Auditing;
 using TSTHRMS.Domain.Common;
+using TSTHRMS.Domain.CustomFields;
 using TSTHRMS.Domain.Documents;
 using TSTHRMS.Domain.Employees;
 using TSTHRMS.Domain.Tenancy;
@@ -19,6 +20,8 @@ public class ApplicationDbContext(
 {
     private static readonly MethodInfo SetTenantFilterMethod = typeof(ApplicationDbContext)
         .GetMethod(nameof(SetTenantFilter), BindingFlags.NonPublic | BindingFlags.Instance)!;
+    private static readonly MethodInfo SetTenantAndSoftDeleteFilterMethod = typeof(ApplicationDbContext)
+        .GetMethod(nameof(SetTenantAndSoftDeleteFilter), BindingFlags.NonPublic | BindingFlags.Instance)!;
 
     public DbSet<Tenant> Tenants => Set<Tenant>();
     public DbSet<LegalEntity> LegalEntities => Set<LegalEntity>();
@@ -33,6 +36,8 @@ public class ApplicationDbContext(
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
     public DbSet<EmployeeEditRequest> EmployeeEditRequests => Set<EmployeeEditRequest>();
+    public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
+    public DbSet<EmployeeCustomFieldValue> EmployeeCustomFieldValues => Set<EmployeeCustomFieldValue>();
     public DbSet<TenantSequence> TenantSequences => Set<TenantSequence>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -44,11 +49,21 @@ public class ApplicationDbContext(
         // Every ITenantScoped entity is automatically filtered by the current tenant -
         // wired into the model convention (not a per-entity opt-in) so a new table can
         // never accidentally leak across tenants by a developer forgetting to add a filter.
+        // ISoftDeletable entities (Section 15's Education/Family/PreviousEmployment/Identity
+        // Document/Nominee - never hard-deleted) get IsDeleted folded into the same filter.
         foreach (var entityType in builder.Model.GetEntityTypes())
         {
-            if (typeof(ITenantScoped).IsAssignableFrom(entityType.ClrType))
+            var clrType = entityType.ClrType;
+            var isTenantScoped = typeof(ITenantScoped).IsAssignableFrom(clrType);
+            var isSoftDeletable = typeof(ISoftDeletable).IsAssignableFrom(clrType);
+
+            if (isTenantScoped && isSoftDeletable)
             {
-                SetTenantFilterMethod.MakeGenericMethod(entityType.ClrType).Invoke(this, [builder]);
+                SetTenantAndSoftDeleteFilterMethod.MakeGenericMethod(clrType).Invoke(this, [builder]);
+            }
+            else if (isTenantScoped)
+            {
+                SetTenantFilterMethod.MakeGenericMethod(clrType).Invoke(this, [builder]);
             }
         }
     }
@@ -56,6 +71,12 @@ public class ApplicationDbContext(
     private void SetTenantFilter<TEntity>(ModelBuilder builder) where TEntity : class, ITenantScoped
     {
         builder.Entity<TEntity>().HasQueryFilter(e => e.TenantId == tenantContext.TenantId);
+    }
+
+    private void SetTenantAndSoftDeleteFilter<TEntity>(ModelBuilder builder)
+        where TEntity : class, ITenantScoped, ISoftDeletable
+    {
+        builder.Entity<TEntity>().HasQueryFilter(e => e.TenantId == tenantContext.TenantId && !e.IsDeleted);
     }
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

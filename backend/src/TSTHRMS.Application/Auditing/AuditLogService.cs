@@ -18,6 +18,7 @@ namespace TSTHRMS.Application.Auditing;
 /// </summary>
 public class AuditLogService(
     IApplicationDbContext dbContext,
+    ITenantContext tenantContext,
     ICurrentUserService currentUserService,
     IUserDirectory userDirectory) : IAuditLogService
 {
@@ -77,16 +78,26 @@ public class AuditLogService(
     {
         // Explicit per-table queries rather than reflection - clearer and every table here has
         // a plain `EmployeeId` FK plus its own `Id`, so there is no generic shortcut worth taking.
-        var educationIds = await dbContext.EducationRecords
-            .Where(e => e.EmployeeId == employeeId).Select(e => e.Id).ToListAsync(cancellationToken);
-        var familyIds = await dbContext.FamilyMembers
-            .Where(e => e.EmployeeId == employeeId).Select(e => e.Id).ToListAsync(cancellationToken);
-        var previousEmploymentIds = await dbContext.PreviousEmploymentRecords
-            .Where(e => e.EmployeeId == employeeId).Select(e => e.Id).ToListAsync(cancellationToken);
-        var identityDocumentIds = await dbContext.IdentityDocuments
-            .Where(e => e.EmployeeId == employeeId).Select(e => e.Id).ToListAsync(cancellationToken);
-        var nomineeIds = await dbContext.Nominees
-            .Where(e => e.EmployeeId == employeeId).Select(e => e.Id).ToListAsync(cancellationToken);
+        //
+        // IgnoreQueryFilters() on the five ISoftDeletable tables so a soft-deleted record's
+        // history doesn't vanish from the employee's Change History timeline - the tenant filter
+        // that comes bundled with the soft-delete filter has to be re-applied manually here since
+        // ignoring filters drops both at once.
+        var educationIds = await dbContext.EducationRecords.IgnoreQueryFilters()
+            .Where(e => e.TenantId == tenantContext.TenantId && e.EmployeeId == employeeId)
+            .Select(e => e.Id).ToListAsync(cancellationToken);
+        var familyIds = await dbContext.FamilyMembers.IgnoreQueryFilters()
+            .Where(e => e.TenantId == tenantContext.TenantId && e.EmployeeId == employeeId)
+            .Select(e => e.Id).ToListAsync(cancellationToken);
+        var previousEmploymentIds = await dbContext.PreviousEmploymentRecords.IgnoreQueryFilters()
+            .Where(e => e.TenantId == tenantContext.TenantId && e.EmployeeId == employeeId)
+            .Select(e => e.Id).ToListAsync(cancellationToken);
+        var identityDocumentIds = await dbContext.IdentityDocuments.IgnoreQueryFilters()
+            .Where(e => e.TenantId == tenantContext.TenantId && e.EmployeeId == employeeId)
+            .Select(e => e.Id).ToListAsync(cancellationToken);
+        var nomineeIds = await dbContext.Nominees.IgnoreQueryFilters()
+            .Where(e => e.TenantId == tenantContext.TenantId && e.EmployeeId == employeeId)
+            .Select(e => e.Id).ToListAsync(cancellationToken);
         var employeeDocumentIds = await dbContext.EmployeeDocuments
             .Where(e => e.EmployeeId == employeeId).Select(e => e.Id).ToListAsync(cancellationToken);
 

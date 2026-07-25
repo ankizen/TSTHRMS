@@ -71,7 +71,8 @@ public class FamilyService(IApplicationDbContext dbContext) : IFamilyService
             return false;
         }
 
-        dbContext.FamilyMembers.Remove(member);
+        member.IsDeleted = true;
+        member.DeletedAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return true;

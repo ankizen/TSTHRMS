@@ -83,7 +83,8 @@ public class IdentityDocumentService(
             return false;
         }
 
-        dbContext.IdentityDocuments.Remove(document);
+        document.IsDeleted = true;
+        document.DeletedAt = DateTimeOffset.UtcNow;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return true;
