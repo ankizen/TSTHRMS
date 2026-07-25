@@ -35,6 +35,7 @@ services:
       ConnectionStrings__Default: "Server=mysql;Port=3306;Database=${MYSQL_DATABASE};User=${MYSQL_USER};Password=${MYSQL_PASSWORD};"
       Jwt__Key: ${JWT_KEY}
       Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN}
+      Frontend__BaseUrl: ${FRONTEND_ORIGIN}
       SeedAdmin__Email: ${SEED_ADMIN_EMAIL}
       SeedAdmin__Password: ${SEED_ADMIN_PASSWORD}
     volumes:

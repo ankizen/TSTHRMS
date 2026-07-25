@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { AlertCircle, ArrowLeft, CalendarClock, Star, UsersRound } from "lucide-react"
+import { AlertCircle, ArrowLeft, CalendarClock, FileCheck2, Star, UsersRound } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useNavigate, useParams } from "react-router-dom"
@@ -15,11 +15,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { getApplicants, moveApplicationStage, setTalentPool } from "./api"
+import {
+  getApplicants, getAssessmentDetail, getTestConfiguration, moveApplicationStage,
+  scoreAssessment, sendAssessment, setTalentPool,
+} from "./api"
 import { APPLICATION_STAGE_LABELS, APPLICATION_STAGE_OPTIONS } from "./constants"
 import { InterviewsSheet } from "./interviews-sheet"
 import { MoveStageDialog } from "./move-stage-dialog"
-import type { ApplicantListItem, ApplicationStage } from "./types"
+import { ScoreAssessmentDialog } from "./score-assessment-dialog"
+import type { ApplicantListItem, ApplicationStage, AssessmentSummary } from "./types"
 
 const REASON_REQUIRED_STAGES: ApplicationStage[] = ["Rejected", "OnHold"]
 
@@ -31,9 +35,22 @@ export function ApplicantsPage() {
 
   const [pendingMove, setPendingMove] = useState<{ applicationId: string; stage: ApplicationStage } | null>(null)
   const [interviewsFor, setInterviewsFor] = useState<{ applicationId: string; candidateName: string } | null>(null)
+  const [scoringAssessment, setScoringAssessment] = useState<AssessmentSummary | null>(null)
 
   const { data: applicants, isLoading } = useQuery({
     queryKey, queryFn: () => getApplicants(jobPostingId), enabled: Boolean(jobPostingId),
+  })
+
+  const { data: testConfiguration } = useQuery({
+    queryKey: ["recruitment", "job-postings", jobPostingId, "test-configuration"],
+    queryFn: () => getTestConfiguration(jobPostingId),
+    enabled: Boolean(jobPostingId),
+  })
+
+  const { data: assessmentDetail } = useQuery({
+    queryKey: ["recruitment", "assessments", scoringAssessment?.id],
+    queryFn: () => getAssessmentDetail(scoringAssessment!.id),
+    enabled: Boolean(scoringAssessment),
   })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey })
@@ -57,6 +74,30 @@ export function ApplicantsPage() {
       await invalidate()
     },
     onError: () => toast.error("Couldn't update the talent pool tag."),
+  })
+
+  const sendAssessmentMutation = useMutation({
+    mutationFn: (applicationId: string) => sendAssessment(applicationId),
+    onSuccess: async (result) => {
+      if (result.succeeded) {
+        toast.success("Assessment sent to the candidate.")
+        await invalidate()
+      } else {
+        toast.error(result.error ?? "Couldn't send the assessment.")
+      }
+    },
+    onError: () => toast.error("Couldn't send the assessment."),
+  })
+
+  const scoreMutation = useMutation({
+    mutationFn: ({ assessmentSubmissionId, score, comments }: { assessmentSubmissionId: string; score: number; comments: string | null }) =>
+      scoreAssessment(assessmentSubmissionId, { score, comments }),
+    onSuccess: async () => {
+      toast.success("Score saved.")
+      setScoringAssessment(null)
+      await invalidate()
+    },
+    onError: () => toast.error("Couldn't save the score."),
   })
 
   const handleStageChange = (applicationId: string, stage: ApplicationStage) => {
@@ -110,6 +151,7 @@ export function ApplicantsPage() {
                   <ApplicantCard
                     key={applicant.applicationId}
                     applicant={applicant}
+                    isAssessmentEnabled={testConfiguration?.isEnabled ?? false}
                     onStageChange={(stage) => handleStageChange(applicant.applicationId, stage)}
                     onToggleTalentPool={() =>
                       talentPoolMutation.mutate({
@@ -123,6 +165,8 @@ export function ApplicantsPage() {
                         candidateName: `${applicant.firstName} ${applicant.lastName}`,
                       })
                     }
+                    onSendAssessment={() => sendAssessmentMutation.mutate(applicant.applicationId)}
+                    onScoreAssessment={() => setScoringAssessment(applicant.assessment)}
                   />
                 ))}
               </div>
@@ -144,17 +188,30 @@ export function ApplicantsPage() {
         candidateName={interviewsFor?.candidateName ?? null}
         onOpenChange={(open) => !open && setInterviewsFor(null)}
       />
+
+      <ScoreAssessmentDialog
+        assessment={scoringAssessment}
+        onOpenChange={(open) => !open && setScoringAssessment(null)}
+        onSubmit={(score, comments) =>
+          scoringAssessment && scoreMutation.mutate({ assessmentSubmissionId: scoringAssessment.id, score, comments })
+        }
+        isSubmitting={scoreMutation.isPending}
+        submissionText={assessmentDetail?.submissionText}
+      />
     </div>
   )
 }
 
 function ApplicantCard({
-  applicant, onStageChange, onToggleTalentPool, onOpenInterviews,
+  applicant, isAssessmentEnabled, onStageChange, onToggleTalentPool, onOpenInterviews, onSendAssessment, onScoreAssessment,
 }: {
   applicant: ApplicantListItem
+  isAssessmentEnabled: boolean
   onStageChange: (stage: ApplicationStage) => void
   onToggleTalentPool: () => void
   onOpenInterviews: () => void
+  onSendAssessment: () => void
+  onScoreAssessment: () => void
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-xl border bg-card p-3 shadow-sm">
@@ -209,6 +266,30 @@ function ApplicantCard({
 
       {applicant.stage === "Rejected" && applicant.rejectionReason && (
         <p className="text-xs text-muted-foreground">Reason: {applicant.rejectionReason}</p>
+      )}
+
+      {isAssessmentEnabled && (
+        <div className="flex items-center gap-2">
+          {!applicant.assessment ? (
+            <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onSendAssessment}>
+              <FileCheck2 className="size-3.5" />
+              Send test
+            </Button>
+          ) : applicant.assessment.score === null ? (
+            applicant.assessment.submittedAt ? (
+              <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onScoreAssessment}>
+                <FileCheck2 className="size-3.5" />
+                Score test
+              </Button>
+            ) : (
+              <Badge variant="secondary">Test sent - awaiting submission</Badge>
+            )
+          ) : (
+            <Badge variant={applicant.assessment.passed ? "default" : "destructive"}>
+              Test: {applicant.assessment.score}/100 - {applicant.assessment.passed ? "Pass" : "Below threshold"}
+            </Badge>
+          )}
+        </div>
       )}
 
       <Select value={applicant.stage} onValueChange={(value) => onStageChange(value as ApplicationStage)}>

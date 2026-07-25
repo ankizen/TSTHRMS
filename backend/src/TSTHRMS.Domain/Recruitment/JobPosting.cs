@@ -32,5 +32,28 @@ public class JobPosting : TenantScopedEntity
     public DateTimeOffset? PublishedAt { get; set; }
     public DateTimeOffset? ClosedAt { get; set; }
 
+    // Section 6: "not every role needs a test" - a per-posting, toggle-able config rather than a
+    // fixed pipeline step. Kept on JobPosting itself (Build Notes: "keep the test configuration
+    // attached to the job opening, not the candidate") rather than a separate config table, the
+    // same way JobRequisition.InterviewRoundCount is inlined instead of split out.
+    public bool IsAssessmentEnabled { get; set; }
+    public AssessmentType AssessmentType { get; set; }
+    public string? AssessmentInstructions { get; set; }
+    public int AssessmentTimeLimitMinutes { get; set; } = 60;
+
+    /// <summary>Days the candidate has to start and submit from when the test is sent - the
+    /// PDF's "clear deadline", distinct from the time-boxed limit once they begin.</summary>
+    public int AssessmentResponseWindowDays { get; set; } = 5;
+    public int AssessmentPassThreshold { get; set; } = 60;
+    public int AssessmentRetakeCooldownMonths { get; set; } = 6;
+
     public ICollection<JobApplication> Applications { get; set; } = new List<JobApplication>();
+}
+
+public enum AssessmentType
+{
+    MachineCodingTest,
+    SkillAssignment,
+    AptitudeTest,
+    CaseStudy
 }

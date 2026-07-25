@@ -16,6 +16,7 @@ using TSTHRMS.Infrastructure.Identity;
 using TSTHRMS.Infrastructure.Persistence;
 using TSTHRMS.Infrastructure.Persistence.Interceptors;
 using TSTHRMS.Infrastructure.Storage;
+using TSTHRMS.Infrastructure.Web;
 
 namespace TSTHRMS.Infrastructure;
 
@@ -83,6 +84,10 @@ public static class DependencyInjection
         services.AddScoped<ICareerSiteService, CareerSiteService>();
         services.AddScoped<IApplicantService, ApplicantService>();
         services.AddScoped<IInterviewService, InterviewService>();
+
+        services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
+        services.AddScoped<IFrontendLinkBuilder, FrontendLinkBuilder>();
+        services.AddScoped<IAssessmentService, AssessmentService>();
 
         return services;
     }

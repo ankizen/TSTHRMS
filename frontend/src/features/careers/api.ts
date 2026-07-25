@@ -2,6 +2,7 @@ import { publicApiClient } from "@/lib/public-api-client"
 import type {
   ApplyResult,
   PublicApplicationRequest,
+  PublicAssessment,
   PublicCompany,
   PublicJobDetail,
   PublicJobFilter,
@@ -47,4 +48,13 @@ export async function submitApplication(
     { headers: { "Content-Type": "multipart/form-data" } },
   )
   return data
+}
+
+export async function getPublicAssessment(tenantSlug: string, token: string): Promise<PublicAssessment> {
+  const { data } = await publicApiClient.get<PublicAssessment>(`/public/${tenantSlug}/assessments/${token}`)
+  return data
+}
+
+export async function submitPublicAssessment(tenantSlug: string, token: string, submissionText: string): Promise<void> {
+  await publicApiClient.post(`/public/${tenantSlug}/assessments/${token}/submit`, { submissionText })
 }

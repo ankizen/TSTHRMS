@@ -136,7 +136,8 @@ public record ApplicantListItemDto(
     DateTimeOffset StageChangedAt,
     string? RejectionReason,
     DateTimeOffset AppliedAt,
-    IReadOnlyList<CandidateOtherApplicationDto> OtherApplications);
+    IReadOnlyList<CandidateOtherApplicationDto> OtherApplications,
+    AssessmentSummaryDto? Assessment);
 
 /// <summary>Section 3's duplicate detection, surfaced the other direction: when HR is looking
 /// at one application, show the candidate's other in-flight applications so history isn't
@@ -214,3 +215,70 @@ public record MyInterviewDto(
     bool HasSubmitted);
 
 public record InterviewerCandidateDto(Guid UserId, string Email, string? EmployeeName);
+
+// ---- Assessment & Test Rounds (Section 6) ----
+
+public record TestConfigurationRequest(
+    bool IsEnabled,
+    AssessmentType Type,
+    string? Instructions,
+    int TimeLimitMinutes,
+    int ResponseWindowDays,
+    int PassThreshold,
+    int RetakeCooldownMonths);
+
+public record TestConfigurationDto(
+    bool IsEnabled,
+    AssessmentType Type,
+    string? Instructions,
+    int TimeLimitMinutes,
+    int ResponseWindowDays,
+    int PassThreshold,
+    int RetakeCooldownMonths);
+
+/// <summary>The compact view shown alongside an applicant (Section 6 - "visible to interviewers
+/// before the next round so they aren't re-asking what the test already covered").</summary>
+public record AssessmentSummaryDto(
+    Guid Id,
+    AssessmentType Type,
+    DateTimeOffset SentAt,
+    DateTimeOffset DueAt,
+    DateTimeOffset? SubmittedAt,
+    int? Score,
+    bool? Passed,
+    DateOnly? RetakeAllowedAfter);
+
+public record AssessmentDetailDto(
+    Guid Id,
+    Guid ApplicationId,
+    AssessmentType Type,
+    string? Instructions,
+    int TimeLimitMinutes,
+    DateTimeOffset SentAt,
+    DateTimeOffset DueAt,
+    DateTimeOffset? SubmittedAt,
+    string? SubmissionText,
+    Guid? SubmissionDocumentId,
+    int? Score,
+    bool? Passed,
+    string? ReviewerComments,
+    DateOnly? RetakeAllowedAfter);
+
+public record ScoreAssessmentRequest(int Score, string? Comments);
+
+public record SendAssessmentResult(bool Succeeded, string? Error, AssessmentSummaryDto? Assessment)
+{
+    public static SendAssessmentResult Success(AssessmentSummaryDto assessment) => new(true, null, assessment);
+    public static SendAssessmentResult Failure(string error) => new(false, error, null);
+}
+
+public record PublicAssessmentDto(
+    string JobTitle,
+    AssessmentType Type,
+    string? Instructions,
+    int TimeLimitMinutes,
+    DateTimeOffset DueAt,
+    bool IsExpired,
+    bool AlreadySubmitted);
+
+public record PublicAssessmentSubmissionRequest(string SubmissionText);

@@ -117,6 +117,7 @@ export interface ApplicantListItem {
   rejectionReason: string | null
   appliedAt: string
   otherApplications: CandidateOtherApplication[]
+  assessment: AssessmentSummary | null
 }
 
 export interface MoveApplicationStageRequest {
@@ -216,6 +217,69 @@ export interface InterviewerCandidate {
   userId: string
   email: string
   employeeName: string | null
+}
+
+export type AssessmentType = "MachineCodingTest" | "SkillAssignment" | "AptitudeTest" | "CaseStudy"
+
+export interface TestConfigurationRequest {
+  isEnabled: boolean
+  type: AssessmentType
+  instructions: string | null
+  timeLimitMinutes: number
+  responseWindowDays: number
+  passThreshold: number
+  retakeCooldownMonths: number
+}
+
+export type TestConfiguration = TestConfigurationRequest
+
+export interface AssessmentSummary {
+  id: string
+  type: AssessmentType
+  sentAt: string
+  dueAt: string
+  submittedAt: string | null
+  score: number | null
+  passed: boolean | null
+  retakeAllowedAfter: string | null
+}
+
+export interface AssessmentDetail {
+  id: string
+  applicationId: string
+  type: AssessmentType
+  instructions: string | null
+  timeLimitMinutes: number
+  sentAt: string
+  dueAt: string
+  submittedAt: string | null
+  submissionText: string | null
+  submissionDocumentId: string | null
+  score: number | null
+  passed: boolean | null
+  reviewerComments: string | null
+  retakeAllowedAfter: string | null
+}
+
+export interface ScoreAssessmentRequest {
+  score: number
+  comments: string | null
+}
+
+export interface SendAssessmentResult {
+  succeeded: boolean
+  error: string | null
+  assessment: AssessmentSummary | null
+}
+
+export interface PublicAssessment {
+  jobTitle: string
+  type: AssessmentType
+  instructions: string | null
+  timeLimitMinutes: number
+  dueAt: string
+  isExpired: boolean
+  alreadySubmitted: boolean
 }
 
 export type { Lookup }

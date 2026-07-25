@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
-  ArrowLeft, CheckCircle2, ExternalLink, Pause, Pencil, Play, Users, XCircle,
+  ArrowLeft, CheckCircle2, ExternalLink, FileCheck2, Pause, Pencil, Play, Users, XCircle,
 } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -10,15 +10,16 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useAuthStore } from "@/stores/auth-store"
 import {
-  approveRequisition, closeRequisition, getCurrentTenant, getRequisition,
-  holdRequisition, publishRequisition, rejectRequisition, resumeRequisition,
+  approveRequisition, closeRequisition, configureTest, getCurrentTenant, getRequisition,
+  getTestConfiguration, holdRequisition, publishRequisition, rejectRequisition, resumeRequisition,
   submitRequisition, updateRequisition,
 } from "./api"
 import { REQUISITION_STATUS_BADGE_VARIANT, REQUISITION_STATUS_LABELS } from "./constants"
 import { DecisionDialog } from "./decision-dialog"
 import { PublishPostingDialog } from "./publish-posting-dialog"
 import { RequisitionFormDialog } from "./requisition-form-dialog"
-import type { JobRequisitionWriteRequest } from "./types"
+import { TestConfigurationDialog } from "./test-configuration-dialog"
+import type { JobRequisitionWriteRequest, TestConfigurationRequest } from "./types"
 
 export function RequisitionDetailPage() {
   const { id = "" } = useParams()
@@ -31,6 +32,7 @@ export function RequisitionDetailPage() {
   const [publishOpen, setPublishOpen] = useState(false)
   const [approveOpen, setApproveOpen] = useState(false)
   const [rejectOpen, setRejectOpen] = useState(false)
+  const [testConfigOpen, setTestConfigOpen] = useState(false)
 
   const queryKey = ["recruitment", "requisitions", id]
   const { data: requisition, isLoading } = useQuery({
@@ -38,6 +40,14 @@ export function RequisitionDetailPage() {
   })
 
   const { data: tenant } = useQuery({ queryKey: ["tenant", "current"], queryFn: getCurrentTenant })
+
+  const jobPostingId = requisition?.jobPosting?.id
+  const testConfigQueryKey = ["recruitment", "job-postings", jobPostingId, "test-configuration"]
+  const { data: testConfiguration } = useQuery({
+    queryKey: testConfigQueryKey,
+    queryFn: () => getTestConfiguration(jobPostingId!),
+    enabled: Boolean(jobPostingId),
+  })
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey })
 
@@ -76,6 +86,15 @@ export function RequisitionDetailPage() {
     mutationFn: (request: Parameters<typeof publishRequisition>[1]) => publishRequisition(id, request),
     onSuccess: async () => { toast.success("Published to the career site."); setPublishOpen(false); await invalidate() },
     onError: () => toast.error("Couldn't publish - a job description is required."),
+  })
+  const testConfigMutation = useMutation({
+    mutationFn: (request: TestConfigurationRequest) => configureTest(jobPostingId!, request),
+    onSuccess: async () => {
+      toast.success("Assessment configuration saved.")
+      setTestConfigOpen(false)
+      await queryClient.invalidateQueries({ queryKey: testConfigQueryKey })
+    },
+    onError: () => toast.error("Couldn't save the assessment configuration."),
   })
 
   if (isLoading || !requisition) {
@@ -190,6 +209,12 @@ export function RequisitionDetailPage() {
             </Link>
           </Button>
         )}
+        {requisition.jobPosting && (
+          <Button variant="outline" onClick={() => setTestConfigOpen(true)}>
+            <FileCheck2 />
+            {testConfiguration?.isEnabled ? "Assessment configured" : "Configure assessment"}
+          </Button>
+        )}
       </div>
 
       {careerSiteUrl && requisition.jobPosting?.isPublished && (
@@ -253,6 +278,13 @@ export function RequisitionDetailPage() {
         title="Reject requisition"
         actionLabel="Reject"
         variant="destructive"
+      />
+      <TestConfigurationDialog
+        open={testConfigOpen}
+        onOpenChange={setTestConfigOpen}
+        onSubmit={(request) => testConfigMutation.mutate(request)}
+        isSubmitting={testConfigMutation.isPending}
+        configuration={testConfiguration ?? null}
       />
     </div>
   )

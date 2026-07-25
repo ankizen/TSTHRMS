@@ -269,6 +269,80 @@ public class RecruitmentFlowTests : IAsyncLifetime
         Assert.True(Assert.Single(myInterviews).HasSubmitted);
     }
 
+    [Fact]
+    public async Task Assessment_send_submit_and_score_flow_including_below_threshold_retake_cooldown()
+    {
+        await using var context = CreateContext(_tenantId);
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+        var hrAssessmentService = CreateAssessmentService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Data Analyst");
+
+        // No test configured yet - sending should fail.
+        using var firstResume = new MemoryStream("%PDF-1.4 resume"u8.ToArray());
+        var applyRequest = new PublicApplicationRequest(
+            "Marie", "Curie", "marie@example.com", "9999999996", null, null, null, true);
+        var applyResult = await careerSiteService.ApplyAsync(
+            posting.Slug, applyRequest, CandidateSource.CareerSite, firstResume, "resume.pdf", "application/pdf", firstResume.Length);
+        var applicationId = applyResult.ApplicationId!.Value;
+
+        var blockedSend = await hrAssessmentService.SendAssessmentAsync(applicationId);
+        Assert.False(blockedSend.Succeeded);
+
+        var config = await hrAssessmentService.ConfigureTestAsync(
+            posting.Id, new TestConfigurationRequest(true, AssessmentType.AptitudeTest, "Answer honestly.", 45, 5, 60, 6));
+        Assert.NotNull(config);
+        Assert.True(config!.IsEnabled);
+
+        var sendResult = await hrAssessmentService.SendAssessmentAsync(applicationId);
+        Assert.True(sendResult.Succeeded);
+        Assert.NotNull(sendResult.Assessment);
+
+        // Sending a second time for the same application is rejected.
+        var duplicateSend = await hrAssessmentService.SendAssessmentAsync(applicationId);
+        Assert.False(duplicateSend.Succeeded);
+
+        var token = await context.AssessmentSubmissions
+            .Where(a => a.ApplicationId == applicationId)
+            .Select(a => a.Token)
+            .SingleAsync();
+
+        var publicAssessment = await hrAssessmentService.GetPublicAssessmentAsync(token);
+        Assert.NotNull(publicAssessment);
+        Assert.False(publicAssessment!.IsExpired);
+        Assert.False(publicAssessment.AlreadySubmitted);
+        Assert.Equal("Data Analyst", publicAssessment.JobTitle);
+
+        var submitted = await hrAssessmentService.SubmitPublicAssessmentAsync(
+            token, new PublicAssessmentSubmissionRequest("My detailed answer."));
+        Assert.True(submitted);
+
+        // A second submission attempt is rejected - the candidate only gets one shot.
+        var duplicateSubmit = await hrAssessmentService.SubmitPublicAssessmentAsync(
+            token, new PublicAssessmentSubmissionRequest("Changed my answer."));
+        Assert.False(duplicateSubmit);
+
+        var scored = await hrAssessmentService.ScoreAsync(
+            sendResult.Assessment!.Id, new ScoreAssessmentRequest(40, "Missed the core question."));
+        Assert.NotNull(scored);
+        Assert.False(scored!.Passed);
+        Assert.NotNull(scored.RetakeAllowedAfter);
+        Assert.True(scored.RetakeAllowedAfter >= DateOnly.FromDateTime(DateTime.UtcNow).AddMonths(5));
+
+        var applicants = await CreateApplicantService(context, Guid.NewGuid(), [RoleNames.HRAdmin])
+            .GetForPostingAsync(posting.Id);
+        var applicantAssessment = Assert.Single(applicants!).Assessment;
+        Assert.NotNull(applicantAssessment);
+        Assert.Equal(40, applicantAssessment!.Score);
+        Assert.False(applicantAssessment.Passed);
+    }
+
+    private AssessmentService CreateAssessmentService(ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles) =>
+        new(context, new TestTenantContext(_tenantId), new TestCurrentUserService(userId, roles),
+            new NoOpFrontendLinkBuilder(), new NoOpEmailSender(), NullLogger<AssessmentService>.Instance);
+
     private InterviewService CreateInterviewService(ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles) =>
         new(context, new TestCurrentUserService(userId, roles), new NoOpUserDirectory(), new NoOpUserManagementService(),
             new NoOpEmailSender(), NullLogger<InterviewService>.Instance);
@@ -342,5 +416,11 @@ public class RecruitmentFlowTests : IAsyncLifetime
     private class TestFileStorageOptions(string rootPath) : Microsoft.Extensions.Options.IOptions<LocalFileStorageOptions>
     {
         public LocalFileStorageOptions Value { get; } = new() { RootPath = rootPath };
+    }
+
+    private class NoOpFrontendLinkBuilder : IFrontendLinkBuilder
+    {
+        public string BuildCareerSiteAssessmentLink(string tenantSlug, string token) =>
+            $"https://example.test/careers/{tenantSlug}/assessment/{token}";
     }
 }

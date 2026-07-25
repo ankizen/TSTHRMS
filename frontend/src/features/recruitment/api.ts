@@ -1,6 +1,7 @@
 import { apiClient } from "@/lib/api-client"
 import type {
   ApplicantListItem,
+  AssessmentDetail,
   Interview,
   InterviewerCandidate,
   InterviewScorecard,
@@ -13,8 +14,12 @@ import type {
   RequisitionStatus,
   RescheduleInterviewRequest,
   ScheduleInterviewRequest,
+  ScoreAssessmentRequest,
+  SendAssessmentResult,
   SubmitScorecardRequest,
   TalentPoolCandidate,
+  TestConfiguration,
+  TestConfigurationRequest,
   UpdateInterviewStatusRequest,
 } from "./types"
 
@@ -133,5 +138,36 @@ export async function getMyInterviews(): Promise<MyInterview[]> {
 
 export async function submitScorecard(interviewId: string, request: SubmitScorecardRequest): Promise<InterviewScorecard> {
   const { data } = await apiClient.post<InterviewScorecard>(`/recruitment/my-interviews/${interviewId}/scorecard`, request)
+  return data
+}
+
+export async function getTestConfiguration(jobPostingId: string): Promise<TestConfiguration> {
+  const { data } = await apiClient.get<TestConfiguration>(`/recruitment/job-postings/${jobPostingId}/test-configuration`)
+  return data
+}
+
+export async function configureTest(jobPostingId: string, request: TestConfigurationRequest): Promise<TestConfiguration> {
+  const { data } = await apiClient.put<TestConfiguration>(
+    `/recruitment/job-postings/${jobPostingId}/test-configuration`, request,
+  )
+  return data
+}
+
+export async function sendAssessment(applicationId: string): Promise<SendAssessmentResult> {
+  const { data } = await apiClient.post<SendAssessmentResult>(`/recruitment/applications/${applicationId}/assessment`)
+  return data
+}
+
+export async function getAssessmentDetail(assessmentSubmissionId: string): Promise<AssessmentDetail> {
+  const { data } = await apiClient.get<AssessmentDetail>(`/recruitment/assessments/${assessmentSubmissionId}`)
+  return data
+}
+
+export async function scoreAssessment(
+  assessmentSubmissionId: string, request: ScoreAssessmentRequest,
+): Promise<AssessmentDetail> {
+  const { data } = await apiClient.post<AssessmentDetail>(
+    `/recruitment/assessments/${assessmentSubmissionId}/score`, request,
+  )
   return data
 }

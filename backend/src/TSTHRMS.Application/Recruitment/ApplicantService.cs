@@ -37,13 +37,16 @@ public class ApplicantService(IApplicationDbContext dbContext, ICurrentUserServi
         var candidateIds = applications.Select(a => a.CandidateId).ToList();
         var otherApplicationsByCandidate = await GetOtherApplicationsByCandidateAsync(
             candidateIds, jobPostingId, cancellationToken);
+        var assessmentsByApplication = await GetAssessmentSummariesByApplicationAsync(
+            applications.Select(a => a.Id).ToList(), cancellationToken);
 
         return applications
             .Select(a => new ApplicantListItemDto(
                 a.Id, a.CandidateId, a.FirstName, a.LastName, a.Email, a.Phone, a.ResumeDocumentId,
                 a.CurrentCtc, a.ExpectedCtc, a.NoticePeriodDays, a.Source, a.IsInTalentPool, a.Stage,
                 a.StageChangedAt, a.RejectionReason, a.AppliedAt,
-                otherApplicationsByCandidate.GetValueOrDefault(a.CandidateId, [])))
+                otherApplicationsByCandidate.GetValueOrDefault(a.CandidateId, []),
+                assessmentsByApplication.GetValueOrDefault(a.Id)))
             .ToList();
     }
 
@@ -79,13 +82,15 @@ public class ApplicantService(IApplicationDbContext dbContext, ICurrentUserServi
         var candidate = application.Candidate!;
         var otherApplications = await GetOtherApplicationsByCandidateAsync(
             [candidate.Id], application.JobPostingId, cancellationToken);
+        var assessments = await GetAssessmentSummariesByApplicationAsync([application.Id], cancellationToken);
 
         return new ApplicantListItemDto(
             application.Id, candidate.Id, candidate.FirstName, candidate.LastName, candidate.Email,
             candidate.Phone, candidate.ResumeDocumentId, candidate.CurrentCtc, candidate.ExpectedCtc,
             candidate.NoticePeriodDays, candidate.Source, candidate.IsInTalentPool, application.Stage,
             application.StageChangedAt, application.RejectionReason, application.AppliedAt,
-            otherApplications.GetValueOrDefault(candidate.Id, []));
+            otherApplications.GetValueOrDefault(candidate.Id, []),
+            assessments.GetValueOrDefault(application.Id));
     }
 
     public async Task<bool> SetTalentPoolAsync(
@@ -143,6 +148,29 @@ public class ApplicantService(IApplicationDbContext dbContext, ICurrentUserServi
         return others
             .GroupBy(x => x.CandidateId)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<CandidateOtherApplicationDto>)g.Select(x => x.Other).ToList());
+    }
+
+    private async Task<Dictionary<Guid, AssessmentSummaryDto>> GetAssessmentSummariesByApplicationAsync(
+        IReadOnlyList<Guid> applicationIds, CancellationToken cancellationToken)
+    {
+        if (applicationIds.Count == 0)
+        {
+            return [];
+        }
+
+        var assessments = await dbContext.AssessmentSubmissions.AsNoTracking()
+            .Where(a => applicationIds.Contains(a.ApplicationId))
+            .Select(a => new
+            {
+                a.ApplicationId, a.Id, AssessmentType = a.Application!.JobPosting!.AssessmentType,
+                a.SentAt, a.DueAt, a.SubmittedAt, a.Score, a.Passed, a.RetakeAllowedAfter,
+            })
+            .ToListAsync(cancellationToken);
+
+        return assessments.ToDictionary(
+            a => a.ApplicationId,
+            a => new AssessmentSummaryDto(
+                a.Id, a.AssessmentType, a.SentAt, a.DueAt, a.SubmittedAt, a.Score, a.Passed, a.RetakeAllowedAfter));
     }
 
     /// <summary>Section 14: a Manager (Hiring Manager) only sees candidates for their own open

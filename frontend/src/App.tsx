@@ -5,6 +5,7 @@ import { ProtectedRoute } from "@/components/protected-route"
 import { CustomFieldsPage } from "@/features/admin/custom-fields/custom-fields-page"
 import { EditRequestsPage } from "@/features/admin/edit-requests/edit-requests-page"
 import { UsersPage } from "@/features/admin/users/users-page"
+import { AssessmentPage } from "@/features/careers/assessment-page"
 import { CareerDetailPage } from "@/features/careers/career-detail-page"
 import { CareerListPage } from "@/features/careers/career-list-page"
 import { CareersLayout } from "@/features/careers/careers-layout"
@@ -34,6 +35,7 @@ export function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/careers/:tenantSlug" element={<CareersLayout />}>
         <Route index element={<CareerListPage />} />
+        <Route path="assessment/:token" element={<AssessmentPage />} />
         <Route path=":jobSlug" element={<CareerDetailPage />} />
       </Route>
       <Route

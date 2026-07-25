@@ -19,6 +19,8 @@ public class JobPostingConfiguration : IEntityTypeConfiguration<JobPosting>
         builder.Property(p => p.Department).HasMaxLength(100);
         builder.Property(p => p.Location).HasMaxLength(150);
         builder.Property(p => p.EmploymentType).HasConversion<string>().HasMaxLength(20);
+        builder.Property(p => p.AssessmentType).HasConversion<string>().HasMaxLength(30);
+        builder.Property(p => p.AssessmentInstructions).HasColumnType("text");
 
         builder.HasIndex(p => new { p.TenantId, p.IsPublished });
 

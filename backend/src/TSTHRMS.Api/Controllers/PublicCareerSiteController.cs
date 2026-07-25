@@ -18,7 +18,8 @@ namespace TSTHRMS.Api.Controllers;
 [AllowAnonymous]
 [ResolvePublicTenant]
 public class PublicCareerSiteController(
-    ICareerSiteService careerSiteService, IApplicationDbContext dbContext, ITenantContext tenantContext) : ControllerBase
+    ICareerSiteService careerSiteService, IAssessmentService assessmentService,
+    IApplicationDbContext dbContext, ITenantContext tenantContext) : ControllerBase
 {
     private const long MaxResumeSizeBytes = 10 * 1024 * 1024;
 
@@ -61,6 +62,22 @@ public class PublicCareerSiteController(
             resume?.ContentType, resume?.Length ?? 0, cancellationToken);
 
         return result.Succeeded ? Ok(result) : BadRequest(new { error = result.Error });
+    }
+
+    [HttpGet("assessments/{token}")]
+    public async Task<ActionResult<PublicAssessmentDto>> GetAssessment(
+        string tenantSlug, string token, CancellationToken cancellationToken)
+    {
+        var assessment = await assessmentService.GetPublicAssessmentAsync(token, cancellationToken);
+        return assessment is null ? NotFound() : Ok(assessment);
+    }
+
+    [HttpPost("assessments/{token}/submit")]
+    public async Task<IActionResult> SubmitAssessment(
+        string tenantSlug, string token, PublicAssessmentSubmissionRequest request, CancellationToken cancellationToken)
+    {
+        var succeeded = await assessmentService.SubmitPublicAssessmentAsync(token, request, cancellationToken);
+        return succeeded ? NoContent() : BadRequest(new { error = "This assessment can no longer be submitted." });
     }
 }
 

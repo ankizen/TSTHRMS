@@ -50,3 +50,15 @@ export interface ApplyResult {
   error: string | null
   applicationId: string | null
 }
+
+export type PublicAssessmentType = "MachineCodingTest" | "SkillAssignment" | "AptitudeTest" | "CaseStudy"
+
+export interface PublicAssessment {
+  jobTitle: string
+  type: PublicAssessmentType
+  instructions: string | null
+  timeLimitMinutes: number
+  dueAt: string
+  isExpired: boolean
+  alreadySubmitted: boolean
+}
