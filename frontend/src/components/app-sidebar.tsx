@@ -1,4 +1,4 @@
-import { ClipboardCheck, KeyRound, LayoutDashboard, Network, SlidersHorizontal, UserCog, Users, UsersRound } from "lucide-react"
+import { Building2, ClipboardCheck, KeyRound, LayoutDashboard, Network, SlidersHorizontal, UserCog, Users, UsersRound } from "lucide-react"
 import { NavLink } from "react-router-dom"
 import {
   Sidebar,
@@ -33,11 +33,13 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-2 py-3">
-        <div className="flex items-center gap-2 px-2">
-          <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary font-semibold text-primary-foreground">
-            T
+        <div className="flex items-center gap-2.5 px-2">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-sm">
+            <Building2 className="size-4.5" />
           </div>
-          <span className="font-semibold group-data-[collapsible=icon]:hidden">TSTHRMS</span>
+          <span className="font-heading font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+            TSTHRMS
+          </span>
         </div>
       </SidebarHeader>
       <SidebarContent>
