@@ -89,6 +89,9 @@ public static class DependencyInjection
         services.AddScoped<IFrontendLinkBuilder, FrontendLinkBuilder>();
         services.AddScoped<IAssessmentService, AssessmentService>();
         services.AddScoped<IOfferService, OfferService>();
+        services.AddScoped<ICandidatePortalAuthService, CandidatePortalAuthService>();
+        services.AddScoped<ICandidatePortalService, CandidatePortalService>();
+        services.AddScoped<IReferralService, ReferralService>();
 
         return services;
     }

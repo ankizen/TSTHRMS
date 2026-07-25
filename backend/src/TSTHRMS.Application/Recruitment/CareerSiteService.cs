@@ -62,6 +62,7 @@ public class CareerSiteService(
         string jobSlug,
         PublicApplicationRequest request,
         CandidateSource source,
+        Guid? referredByEmployeeId,
         Stream? resumeStream,
         string? resumeFileName,
         string? resumeContentType,
@@ -73,15 +74,23 @@ public class CareerSiteService(
             return ApplyResult.Failure("Consent to store and process your application data is required.");
         }
 
-        if (resumeStream is null || resumeSizeBytes == 0 || string.IsNullOrWhiteSpace(resumeFileName))
+        var hasResume = resumeStream is not null && resumeSizeBytes > 0 && !string.IsNullOrWhiteSpace(resumeFileName);
+
+        // A direct career-site application always includes a resume (Section 1's form); a
+        // referral (Section 4) doesn't require one - the referring employee may only have the
+        // candidate's contact details on hand.
+        if (!hasResume && source != CandidateSource.Referral)
         {
             return ApplyResult.Failure("A resume file is required.");
         }
 
-        var resumeError = DocumentValidation.Validate(resumeSizeBytes, resumeContentType ?? "");
-        if (resumeError is not null)
+        if (hasResume)
         {
-            return ApplyResult.Failure(resumeError);
+            var resumeError = DocumentValidation.Validate(resumeSizeBytes, resumeContentType ?? "");
+            if (resumeError is not null)
+            {
+                return ApplyResult.Failure(resumeError);
+            }
         }
 
         var posting = await dbContext.JobPostings
@@ -97,10 +106,12 @@ public class CareerSiteService(
 
         var now = DateTimeOffset.UtcNow;
 
-        var resumeDocument = await DocumentAttachmentHelper.SaveAndReplaceAsync(
-            dbContext, fileStorageService, tenantContext.TenantId, candidate?.ResumeDocumentId,
-            resumeStream, resumeFileName, resumeContentType ?? "application/octet-stream", resumeSizeBytes,
-            null, cancellationToken);
+        var resumeDocument = hasResume
+            ? await DocumentAttachmentHelper.SaveAndReplaceAsync(
+                dbContext, fileStorageService, tenantContext.TenantId, candidate?.ResumeDocumentId,
+                resumeStream!, resumeFileName!, resumeContentType ?? "application/octet-stream", resumeSizeBytes,
+                null, cancellationToken)
+            : null;
 
         if (candidate is null)
         {
@@ -111,6 +122,7 @@ public class CareerSiteService(
                 Email = request.Email,
                 Phone = request.Phone,
                 Source = source,
+                ReferredByEmployeeId = referredByEmployeeId,
                 ConsentGivenAt = now,
             };
             dbContext.Candidates.Add(candidate);
@@ -120,12 +132,21 @@ public class CareerSiteService(
             candidate.FirstName = request.FirstName;
             candidate.LastName = request.LastName;
             candidate.ConsentGivenAt = now;
+
+            // Never overwrites an existing referrer/source - those describe how this person
+            // was *originally* acquired, which a later application shouldn't rewrite.
+            candidate.ReferredByEmployeeId ??= referredByEmployeeId;
         }
 
         candidate.CurrentCtc = request.CurrentCtc;
         candidate.ExpectedCtc = request.ExpectedCtc;
         candidate.NoticePeriodDays = request.NoticePeriodDays;
-        candidate.ResumeDocument = resumeDocument;
+
+        // A resume-less referral must never wipe out a resume the candidate already has on file.
+        if (hasResume)
+        {
+            candidate.ResumeDocument = resumeDocument;
+        }
 
         // Flush now so Candidate.Id exists for the duplicate-application check and the
         // Application row below - cheaper than a second round trip if we skip it and hit a

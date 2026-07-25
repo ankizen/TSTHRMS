@@ -52,6 +52,7 @@ public class ApplicationDbContext(
     public DbSet<AssessmentSubmission> AssessmentSubmissions => Set<AssessmentSubmission>();
     public DbSet<Offer> Offers => Set<Offer>();
     public DbSet<OfferVersion> OfferVersions => Set<OfferVersion>();
+    public DbSet<CandidateOtp> CandidateOtps => Set<CandidateOtp>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -6,6 +6,8 @@ import { CustomFieldsPage } from "@/features/admin/custom-fields/custom-fields-p
 import { EditRequestsPage } from "@/features/admin/edit-requests/edit-requests-page"
 import { UsersPage } from "@/features/admin/users/users-page"
 import { AssessmentPage } from "@/features/careers/assessment-page"
+import { CandidateLoginPage } from "@/features/careers/candidate-login-page"
+import { CandidatePortalPage } from "@/features/careers/candidate-portal-page"
 import { CareerDetailPage } from "@/features/careers/career-detail-page"
 import { CareerListPage } from "@/features/careers/career-list-page"
 import { CareersLayout } from "@/features/careers/careers-layout"
@@ -18,6 +20,8 @@ import { MyTeamPage } from "@/features/my/my-team-page"
 import { OrgChartPage } from "@/features/org-chart/org-chart-page"
 import { ApplicantsPage } from "@/features/recruitment/applicants-page"
 import { MyInterviewsPage } from "@/features/recruitment/my-interviews-page"
+import { MyReferralsPage } from "@/features/recruitment/referrals/my-referrals-page"
+import { ReferCandidatePage } from "@/features/recruitment/referrals/refer-candidate-page"
 import { RequisitionDetailPage } from "@/features/recruitment/requisition-detail-page"
 import { RequisitionsListPage } from "@/features/recruitment/requisitions-list-page"
 import { TalentPoolPage } from "@/features/recruitment/talent-pool-page"
@@ -38,6 +42,8 @@ export function App() {
         <Route index element={<CareerListPage />} />
         <Route path="assessment/:token" element={<AssessmentPage />} />
         <Route path="offer/:token" element={<OfferPage />} />
+        <Route path="portal/login" element={<CandidateLoginPage />} />
+        <Route path="portal" element={<CandidatePortalPage />} />
         <Route path=":jobSlug" element={<CareerDetailPage />} />
       </Route>
       <Route
@@ -57,6 +63,8 @@ export function App() {
         <Route path="/recruitment/requisitions/:id" element={<RequisitionDetailPage />} />
         <Route path="/recruitment/postings/:jobPostingId/applicants" element={<ApplicantsPage />} />
         <Route path="/recruitment/talent-pool" element={<TalentPoolPage />} />
+        <Route path="/recruitment/refer" element={<ReferCandidatePage />} />
+        <Route path="/recruitment/my-referrals" element={<MyReferralsPage />} />
         <Route path="/my/profile" element={<MyProfilePage />} />
         <Route path="/my/team" element={<MyTeamPage />} />
         <Route path="/my/interviews" element={<MyInterviewsPage />} />

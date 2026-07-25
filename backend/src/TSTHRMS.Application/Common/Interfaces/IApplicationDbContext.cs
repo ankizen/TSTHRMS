@@ -37,6 +37,7 @@ public interface IApplicationDbContext
     DbSet<AssessmentSubmission> AssessmentSubmissions { get; }
     DbSet<Offer> Offers { get; }
     DbSet<OfferVersion> OfferVersions { get; }
+    DbSet<CandidateOtp> CandidateOtps { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

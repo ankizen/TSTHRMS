@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.MySql;
@@ -9,6 +10,7 @@ using TSTHRMS.Application.Users;
 using TSTHRMS.Application.Users.Dtos;
 using TSTHRMS.Domain.Recruitment;
 using TSTHRMS.Domain.Tenancy;
+using TSTHRMS.Infrastructure.Auth;
 using TSTHRMS.Infrastructure.Persistence;
 using TSTHRMS.Infrastructure.Storage;
 
@@ -95,7 +97,7 @@ public class RecruitmentFlowTests : IAsyncLifetime
         using var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray());
 
         var firstApply = await careerSiteService.ApplyAsync(
-            published.JobPosting.Slug, applyRequest, CandidateSource.CareerSite,
+            published.JobPosting.Slug, applyRequest, CandidateSource.CareerSite, null,
             resume, "resume.pdf", "application/pdf", resume.Length);
         Assert.True(firstApply.Succeeded);
         Assert.NotNull(firstApply.ApplicationId);
@@ -103,7 +105,7 @@ public class RecruitmentFlowTests : IAsyncLifetime
         // Re-applying to the same posting with the same email/phone is rejected, not duplicated.
         resume.Position = 0;
         var duplicateApply = await careerSiteService.ApplyAsync(
-            published.JobPosting.Slug, applyRequest, CandidateSource.CareerSite,
+            published.JobPosting.Slug, applyRequest, CandidateSource.CareerSite, null,
             resume, "resume.pdf", "application/pdf", resume.Length);
         Assert.False(duplicateApply.Succeeded);
 
@@ -147,14 +149,14 @@ public class RecruitmentFlowTests : IAsyncLifetime
         using (var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray()))
         {
             var firstApply = await careerSiteService.ApplyAsync(
-                firstPosting.Slug, applyRequest, CandidateSource.CareerSite, resume, "resume.pdf", "application/pdf", resume.Length);
+                firstPosting.Slug, applyRequest, CandidateSource.CareerSite, null, resume, "resume.pdf", "application/pdf", resume.Length);
             Assert.True(firstApply.Succeeded);
         }
 
         using (var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray()))
         {
             var secondApply = await careerSiteService.ApplyAsync(
-                secondPosting.Slug, applyRequest, CandidateSource.CareerSite, resume, "resume.pdf", "application/pdf", resume.Length);
+                secondPosting.Slug, applyRequest, CandidateSource.CareerSite, null, resume, "resume.pdf", "application/pdf", resume.Length);
             Assert.True(secondApply.Succeeded);
         }
 
@@ -215,7 +217,7 @@ public class RecruitmentFlowTests : IAsyncLifetime
         var applyRequest = new PublicApplicationRequest(
             "Grace", "Hopper", "grace@example.com", "9999999997", null, null, null, true);
         var applyResult = await careerSiteService.ApplyAsync(
-            posting.Slug, applyRequest, CandidateSource.CareerSite, resume, "resume.pdf", "application/pdf", resume.Length);
+            posting.Slug, applyRequest, CandidateSource.CareerSite, null, resume, "resume.pdf", "application/pdf", resume.Length);
         var applicationId = applyResult.ApplicationId!.Value;
 
         var panelistA = Guid.NewGuid();
@@ -285,7 +287,7 @@ public class RecruitmentFlowTests : IAsyncLifetime
         var applyRequest = new PublicApplicationRequest(
             "Marie", "Curie", "marie@example.com", "9999999996", null, null, null, true);
         var applyResult = await careerSiteService.ApplyAsync(
-            posting.Slug, applyRequest, CandidateSource.CareerSite, firstResume, "resume.pdf", "application/pdf", firstResume.Length);
+            posting.Slug, applyRequest, CandidateSource.CareerSite, null, firstResume, "resume.pdf", "application/pdf", firstResume.Length);
         var applicationId = applyResult.ApplicationId!.Value;
 
         var blockedSend = await hrAssessmentService.SendAssessmentAsync(applicationId);
@@ -354,7 +356,7 @@ public class RecruitmentFlowTests : IAsyncLifetime
         var applyRequest = new PublicApplicationRequest(
             "Alan", "Turing", "alan@example.com", "9999999995", null, null, null, true);
         var applyResult = await careerSiteService.ApplyAsync(
-            posting.Slug, applyRequest, CandidateSource.CareerSite, resume, "resume.pdf", "application/pdf", resume.Length);
+            posting.Slug, applyRequest, CandidateSource.CareerSite, null, resume, "resume.pdf", "application/pdf", resume.Length);
         var applicationId = applyResult.ApplicationId!.Value;
 
         var created = await hrOfferService.CreateAsync(
@@ -422,7 +424,7 @@ public class RecruitmentFlowTests : IAsyncLifetime
         var applyRequest = new PublicApplicationRequest(
             "Katherine", "Johnson", "katherine@example.com", "9999999994", null, null, null, true);
         var applyResult = await careerSiteService.ApplyAsync(
-            posting.Slug, applyRequest, CandidateSource.CareerSite, resume, "resume.pdf", "application/pdf", resume.Length);
+            posting.Slug, applyRequest, CandidateSource.CareerSite, null, resume, "resume.pdf", "application/pdf", resume.Length);
         var applicationId = applyResult.ApplicationId!.Value;
 
         var offer = await hrOfferService.CreateAsync(
@@ -444,6 +446,120 @@ public class RecruitmentFlowTests : IAsyncLifetime
         var finalOffer = await hrOfferService.GetForApplicationAsync(applicationId);
         Assert.Equal(OfferStatus.Declined, finalOffer!.Status);
     }
+
+    [Fact]
+    public async Task Candidate_can_request_and_verify_an_otp_and_only_sees_their_own_applications()
+    {
+        await using var context = CreateContext(_tenantId);
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Site Reliability Engineer");
+
+        using (var resumeA = new MemoryStream("%PDF-1.4 resume"u8.ToArray()))
+        {
+            var applyA = await careerSiteService.ApplyAsync(
+                posting.Slug, new PublicApplicationRequest("Ada", "Byron", "ada.byron@example.com", "9999999993", null, null, null, true),
+                CandidateSource.CareerSite, null, resumeA, "resume.pdf", "application/pdf", resumeA.Length);
+            Assert.True(applyA.Succeeded);
+        }
+
+        using (var resumeB = new MemoryStream("%PDF-1.4 resume"u8.ToArray()))
+        {
+            var applyB = await careerSiteService.ApplyAsync(
+                posting.Slug, new PublicApplicationRequest("Bob", "Noyce", "bob.noyce@example.com", "9999999992", null, null, null, true),
+                CandidateSource.CareerSite, null, resumeB, "resume.pdf", "application/pdf", resumeB.Length);
+            Assert.True(applyB.Succeeded);
+        }
+
+        var emailSender = new CapturingEmailSender();
+        var authService = CreateCandidatePortalAuthService(context, emailSender);
+
+        await authService.RequestOtpAsync("ada.byron@example.com");
+        Assert.NotNull(emailSender.LastHtmlBody);
+        var code = Regex.Match(emailSender.LastHtmlBody!, @"\d{6}").Value;
+        Assert.Equal(6, code.Length);
+
+        var wrongCode = code == "000000" ? "111111" : "000000";
+        var wrongCodeResult = await authService.VerifyOtpAsync("ada.byron@example.com", wrongCode);
+        Assert.False(wrongCodeResult.Succeeded);
+
+        var loginResult = await authService.VerifyOtpAsync("ada.byron@example.com", code);
+        Assert.True(loginResult.Succeeded);
+        Assert.NotNull(loginResult.AccessToken);
+        Assert.Equal("Ada Byron", loginResult.CandidateName);
+
+        // The code is single-use - a repeat attempt with the same code is rejected.
+        var reuseResult = await authService.VerifyOtpAsync("ada.byron@example.com", code);
+        Assert.False(reuseResult.Succeeded);
+
+        var adaCandidateId = await context.Candidates.AsNoTracking()
+            .Where(c => c.Email == "ada.byron@example.com").Select(c => c.Id).SingleAsync();
+        var bobCandidateId = await context.Candidates.AsNoTracking()
+            .Where(c => c.Email == "bob.noyce@example.com").Select(c => c.Id).SingleAsync();
+
+        var adaApplications = await new CandidatePortalService(context, new TestCandidateContext(adaCandidateId))
+            .GetMyApplicationsAsync();
+        var bobApplications = await new CandidatePortalService(context, new TestCandidateContext(bobCandidateId))
+            .GetMyApplicationsAsync();
+
+        var adaApplication = Assert.Single(adaApplications);
+        var bobApplication = Assert.Single(bobApplications);
+        Assert.Equal(posting.Title, adaApplication.JobPostingTitle);
+        Assert.NotEqual(adaApplication.ApplicationId, bobApplication.ApplicationId);
+
+        var unauthenticated = await new CandidatePortalService(context, new TestCandidateContext(null)).GetMyApplicationsAsync();
+        Assert.Empty(unauthenticated);
+    }
+
+    [Fact]
+    public async Task Employee_referral_tags_the_candidate_and_status_is_only_visible_to_the_referrer()
+    {
+        await using var context = CreateContext(_tenantId);
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Sales Executive");
+
+        var referringEmployeeId = Guid.NewGuid();
+        var otherEmployeeId = Guid.NewGuid();
+
+        var referralService = new ReferralService(
+            context, new TestCurrentUserService(Guid.NewGuid(), [], referringEmployeeId), careerSiteService);
+
+        // No resume attached - Section 4 referrals don't require one, unlike a direct application.
+        var referralResult = await referralService.SubmitReferralAsync(
+            posting.Slug, new ReferralSubmissionRequest("Grace", "Murray", "grace.murray@example.com", "9999999991"),
+            null, null, null, 0);
+        Assert.True(referralResult.Succeeded);
+
+        var candidate = await context.Candidates.AsNoTracking().SingleAsync(c => c.Email == "grace.murray@example.com");
+        Assert.Equal(CandidateSource.Referral, candidate.Source);
+        Assert.Equal(referringEmployeeId, candidate.ReferredByEmployeeId);
+
+        var myReferrals = await referralService.GetMyReferralsAsync();
+        var referral = Assert.Single(myReferrals);
+        Assert.Equal("Grace Murray", referral.CandidateName);
+        Assert.Equal(posting.Title, referral.JobPostingTitle);
+
+        var otherReferralService = new ReferralService(
+            context, new TestCurrentUserService(Guid.NewGuid(), [], otherEmployeeId), careerSiteService);
+        Assert.Empty(await otherReferralService.GetMyReferralsAsync());
+
+        // A login with no linked employee record is blocked outright, rather than silently
+        // submitting an unattributed referral.
+        var noEmployeeReferralService = new ReferralService(
+            context, new TestCurrentUserService(Guid.NewGuid(), []), careerSiteService);
+        var blockedResult = await noEmployeeReferralService.SubmitReferralAsync(
+            posting.Slug, new ReferralSubmissionRequest("X", "Y", "x.y@example.com", "9999999990"), null, null, null, 0);
+        Assert.False(blockedResult.Succeeded);
+    }
+
+    private CandidatePortalAuthService CreateCandidatePortalAuthService(ApplicationDbContext context, IEmailSender emailSender) =>
+        new(context, new TestTenantContext(_tenantId), emailSender, new JwtTokenGenerator(new TestJwtOptions()),
+            NullLogger<CandidatePortalAuthService>.Instance);
 
     private OfferService CreateOfferService(ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles) =>
         new(context, new TestTenantContext(_tenantId), new TestCurrentUserService(userId, roles),
@@ -488,16 +604,45 @@ public class RecruitmentFlowTests : IAsyncLifetime
         public bool IsResolved => tenantId != Guid.Empty;
     }
 
-    private class TestCurrentUserService(Guid? userId, IReadOnlyCollection<string> roles) : ICurrentUserService
+    private class TestCurrentUserService(Guid? userId, IReadOnlyCollection<string> roles, Guid? employeeId = null) : ICurrentUserService
     {
         public Guid? UserId => userId;
         public IReadOnlyCollection<string> Roles => roles;
+        public Guid? EmployeeId => employeeId;
     }
 
     private class NoOpEmailSender : IEmailSender
     {
         public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken cancellationToken = default) =>
             Task.CompletedTask;
+    }
+
+    /// <summary>Captures the last sent email so a test can pull the OTP code out of it - there's
+    /// no other way to learn the plaintext code, since only its hash is ever persisted.</summary>
+    private class CapturingEmailSender : IEmailSender
+    {
+        public string? LastHtmlBody { get; private set; }
+
+        public Task SendAsync(string toEmail, string subject, string htmlBody, CancellationToken cancellationToken = default)
+        {
+            LastHtmlBody = htmlBody;
+            return Task.CompletedTask;
+        }
+    }
+
+    private class TestCandidateContext(Guid? candidateId) : ICandidateContext
+    {
+        public Guid? CandidateId => candidateId;
+    }
+
+    private class TestJwtOptions : Microsoft.Extensions.Options.IOptions<JwtSettings>
+    {
+        public JwtSettings Value { get; } = new()
+        {
+            Key = "test-only-signing-key-at-least-32-characters-long",
+            Issuer = "TSTHRMS.Test",
+            Audience = "TSTHRMS.Test.Client",
+        };
     }
 
     /// <summary>Display-name lookups aren't asserted on in these tests - only that the right

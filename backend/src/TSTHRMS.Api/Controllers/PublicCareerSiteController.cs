@@ -19,6 +19,7 @@ namespace TSTHRMS.Api.Controllers;
 [ResolvePublicTenant]
 public class PublicCareerSiteController(
     ICareerSiteService careerSiteService, IAssessmentService assessmentService, IOfferService offerService,
+    ICandidatePortalAuthService candidatePortalAuthService,
     IApplicationDbContext dbContext, ITenantContext tenantContext) : ControllerBase
 {
     private const long MaxResumeSizeBytes = 10 * 1024 * 1024;
@@ -58,7 +59,7 @@ public class PublicCareerSiteController(
     {
         await using var stream = resume?.OpenReadStream();
         var result = await careerSiteService.ApplyAsync(
-            jobSlug, request, CandidateSource.CareerSite, stream, resume?.FileName,
+            jobSlug, request, CandidateSource.CareerSite, null, stream, resume?.FileName,
             resume?.ContentType, resume?.Length ?? 0, cancellationToken);
 
         return result.Succeeded ? Ok(result) : BadRequest(new { error = result.Error });
@@ -93,6 +94,22 @@ public class PublicCareerSiteController(
     {
         var succeeded = await offerService.RespondPublicOfferAsync(token, request, cancellationToken);
         return succeeded ? NoContent() : BadRequest(new { error = "This offer can no longer be responded to." });
+    }
+
+    [HttpPost("candidate-auth/request-otp")]
+    public async Task<IActionResult> RequestCandidateOtp(
+        string tenantSlug, RequestCandidateOtpRequest request, CancellationToken cancellationToken)
+    {
+        await candidatePortalAuthService.RequestOtpAsync(request.Email, cancellationToken);
+        return NoContent();
+    }
+
+    [HttpPost("candidate-auth/verify-otp")]
+    public async Task<ActionResult<CandidateLoginResultDto>> VerifyCandidateOtp(
+        string tenantSlug, VerifyCandidateOtpRequest request, CancellationToken cancellationToken)
+    {
+        var result = await candidatePortalAuthService.VerifyOtpAsync(request.Email, request.Code, cancellationToken);
+        return result.Succeeded ? Ok(result) : Unauthorized(new { error = "Invalid or expired code." });
     }
 }
 

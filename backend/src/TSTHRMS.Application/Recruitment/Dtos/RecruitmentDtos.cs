@@ -338,3 +338,40 @@ public record PublicOfferDto(
     OfferStatus Status);
 
 public record PublicOfferDecisionRequest(bool Accepted, string? DeclineReason);
+
+// ---- Candidate Portal (Section 3) ----
+
+public record RequestCandidateOtpRequest(string Email);
+
+public record VerifyCandidateOtpRequest(string Email, string Code);
+
+public record CandidateLoginResultDto(bool Succeeded, string? AccessToken, DateTimeOffset? ExpiresAt, string? CandidateName);
+
+public record MyApplicationInterviewDto(
+    Guid InterviewId, ApplicationStage Round, DateTimeOffset ScheduledAt, int DurationMinutes,
+    string? VideoLink, InterviewStatus Status);
+
+/// <summary>Deliberately excludes Score/Passed - Section 14 keeps internal review outcomes out
+/// of the candidate's own view, same principle as never showing them interview scorecards.</summary>
+public record MyApplicationAssessmentDto(AssessmentType Type, DateTimeOffset DueAt, bool Submitted);
+
+/// <summary>OfferToken is only populated when Status is Sent, so the frontend can link straight
+/// to the existing accept/decline page without a second lookup.</summary>
+public record MyApplicationOfferDto(OfferStatus Status, string? OfferToken);
+
+public record MyApplicationDto(
+    Guid ApplicationId,
+    string JobPostingTitle,
+    ApplicationStage Stage,
+    DateTimeOffset AppliedAt,
+    IReadOnlyList<MyApplicationInterviewDto> Interviews,
+    MyApplicationAssessmentDto? Assessment,
+    MyApplicationOfferDto? Offer);
+
+// ---- Employee Referral Tracking (Section 4) ----
+
+public record ReferralSubmissionRequest(string FirstName, string LastName, string Email, string Phone);
+
+/// <summary>Stage only - Section 4: "referral status visible to the referring employee (without
+/// exposing full interview feedback)".</summary>
+public record MyReferralDto(Guid CandidateId, string CandidateName, string JobPostingTitle, ApplicationStage Stage, DateTimeOffset AppliedAt);

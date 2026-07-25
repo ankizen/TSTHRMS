@@ -1,6 +1,9 @@
 import { publicApiClient } from "@/lib/public-api-client"
+import { candidateApiClient } from "./candidate-api-client"
 import type {
   ApplyResult,
+  CandidateLoginResult,
+  MyApplication,
   PublicApplicationRequest,
   PublicAssessment,
   PublicCompany,
@@ -69,4 +72,22 @@ export async function respondToPublicOffer(
   tenantSlug: string, token: string, accepted: boolean, declineReason: string | null,
 ): Promise<void> {
   await publicApiClient.post(`/public/${tenantSlug}/offers/${token}/respond`, { accepted, declineReason })
+}
+
+export async function requestCandidateOtp(tenantSlug: string, email: string): Promise<void> {
+  await publicApiClient.post(`/public/${tenantSlug}/candidate-auth/request-otp`, { email })
+}
+
+export async function verifyCandidateOtp(
+  tenantSlug: string, email: string, code: string,
+): Promise<CandidateLoginResult> {
+  const { data } = await publicApiClient.post<CandidateLoginResult>(
+    `/public/${tenantSlug}/candidate-auth/verify-otp`, { email, code },
+  )
+  return data
+}
+
+export async function getMyApplications(): Promise<MyApplication[]> {
+  const { data } = await candidateApiClient.get<MyApplication[]>("/candidate-portal/applications")
+  return data
 }

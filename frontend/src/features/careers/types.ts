@@ -79,3 +79,47 @@ export interface PublicOffer {
   isExpired: boolean
   status: PublicOfferStatus
 }
+
+export type PublicApplicationStage =
+  | "Applied" | "Screening" | "Assessment"
+  | "InterviewRound1" | "InterviewRound2" | "InterviewRound3"
+  | "Selected" | "Offer" | "OfferAccepted" | "Hired" | "Rejected" | "OnHold"
+
+export type PublicInterviewStatus = "Scheduled" | "Completed" | "NoShow" | "Cancelled"
+
+export interface CandidateLoginResult {
+  succeeded: boolean
+  accessToken: string | null
+  expiresAt: string | null
+  candidateName: string | null
+}
+
+export interface MyApplicationInterview {
+  interviewId: string
+  round: PublicApplicationStage
+  scheduledAt: string
+  durationMinutes: number
+  videoLink: string | null
+  status: PublicInterviewStatus
+}
+
+export interface MyApplicationAssessment {
+  type: PublicAssessmentType
+  dueAt: string
+  submitted: boolean
+}
+
+export interface MyApplicationOffer {
+  status: PublicOfferStatus
+  offerToken: string | null
+}
+
+export interface MyApplication {
+  applicationId: string
+  jobPostingTitle: string
+  stage: PublicApplicationStage
+  appliedAt: string
+  interviews: MyApplicationInterview[]
+  assessment: MyApplicationAssessment | null
+  offer: MyApplicationOffer | null
+}
