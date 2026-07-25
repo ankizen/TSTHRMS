@@ -24,11 +24,6 @@ RUN dotnet publish src/TSTHRMS.Api/TSTHRMS.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 
-RUN groupadd --system --gid 1000 app \
-    && useradd --system --uid 1000 --gid app app \
-    && mkdir -p /data/uploads /data/logs \
-    && chown -R app:app /data /app
-
 # /data is where a Coolify persistent volume should be mounted - uploaded files and log files
 # both need to survive a redeploy, unlike the rest of the container filesystem.
 ENV FileStorage__RootPath=/data/uploads
@@ -38,6 +33,12 @@ ENV ASPNETCORE_ENVIRONMENT=Production
 EXPOSE 8080
 
 COPY --from=build /app/publish .
+
+# mcr.microsoft.com/dotnet/aspnet already ships a non-root "app" user/group (since .NET 8) -
+# creating a new one collides with it (groupadd exit code 9, "group name already in use").
+RUN mkdir -p /data/uploads /data/logs \
+    && chown -R app:app /data /app
+
 USER app
 
 ENTRYPOINT ["dotnet", "TSTHRMS.Api.dll"]
