@@ -1,0 +1,49 @@
+# Coolify deployment: one resource, two services (mysql + api), instead of two separate
+# Coolify resources. See docs/deployment-coolify-vercel.md for the full runbook - this file is
+# NOT for local dev (that's the plain docker-compose.yml at the repo root, mysql + adminer only).
+#
+# Every ${VAR} below is supplied as an Environment Variable on this Coolify resource - never
+# hardcoded here, so nothing sensitive lives in git.
+services:
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # No `ports:` mapping on purpose - reachable only from the `api` service over the compose
+    # network's internal DNS (hostname `mysql`), never from outside the server.
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Default: "Server=mysql;Port=3306;Database=${MYSQL_DATABASE};User=${MYSQL_USER};Password=${MYSQL_PASSWORD};"
+      Jwt__Key: ${JWT_KEY}
+      Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN}
+      SeedAdmin__Email: ${SEED_ADMIN_EMAIL}
+      SeedAdmin__Password: ${SEED_ADMIN_PASSWORD}
+    volumes:
+      - api_data:/data
+    # Container port only (no host mapping) - Coolify's proxy routes the domain you assign to
+    # this service (General tab -> "Domains for api") to this port directly.
+    ports:
+      - "8080"
+
+volumes:
+  mysql_data:
+  api_data:

@@ -12,88 +12,79 @@ origin. That has two real consequences already handled in code, not just config:
   itself requires `Secure=true` (also already the case outside Development). Both origins must be
   HTTPS for this to work; Vercel always is, and Coolify's domains get one automatically (below).
 
-## 1. MySQL on Coolify
+These examples use `hrms.example.com` for the frontend and `api.hrms.example.com` for the API -
+substitute your own domain throughout.
 
-1. Coolify dashboard -> your project -> **+ New Resource -> Database -> MySQL** (8.x).
-2. Give it a name (e.g. `tsthrms-mysql`) and deploy it. Coolify creates the database, a root
-   user, and puts the container on the project's private Docker network.
-3. **Do not expose the database's port publicly** - leave it reachable only on the internal
-   network. The API resource (step 2 below) reaches it by the internal hostname Coolify assigns
-   (visible on the database resource's page, usually the resource/container name), not a public
-   IP or port.
-4. Create the application database and a dedicated app user (Coolify's MySQL "Terminal" tab, or
-   any MySQL client pointed at the internal host from another container on the same network):
-   ```sql
-   CREATE DATABASE tsthrms_prod CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-   CREATE USER 'tsthrms_app'@'%' IDENTIFIED BY '<strong-generated-password>';
-   GRANT ALL PRIVILEGES ON tsthrms_prod.* TO 'tsthrms_app'@'%';
-   FLUSH PRIVILEGES;
-   ```
-5. Note the connection details: internal host, port (usually `3306`), database name, and the
-   `tsthrms_app` user/password - needed for `ConnectionStrings__Default` in step 2.
+## 1. MySQL + API on Coolify (one resource, Docker Compose)
 
-## 2. API on Coolify (Docker deployment)
+`docker-compose.prod.yml` (repo root) defines both services - **not** the plain
+`docker-compose.yml` at the repo root, which is local-dev-only (mysql + adminer, no api service).
+Every value either service needs comes from a `${VAR}` in that file, supplied as an Environment
+Variable on the Coolify resource - nothing sensitive is hardcoded in git.
 
-1. **+ New Resource -> Application**, connect this git repository.
-2. **Build Pack: Dockerfile**.
-   - **Base Directory**: `backend`
-   - **Dockerfile Location**: `Dockerfile` (i.e. `backend/Dockerfile`)
-   - **Port**: `8080` (matches `EXPOSE 8080` / `ASPNETCORE_URLS` baked into the Dockerfile)
-3. **Persistent storage**: add a volume mounted at `/data`. Uploaded documents
-   (`FileStorage__RootPath=/data/uploads`, set in the Dockerfile) and log files
-   (`/data/logs`) both need to survive a redeploy - without this volume, every deploy silently
-   wipes every uploaded file, since the rest of the container filesystem is ephemeral.
-4. **Environment variables**:
+1. **+ New Resource -> Application**, connect this git repository, **Build Pack: Docker Compose**.
+   - **Base Directory**: `/`
+   - **Docker Compose Location**: `/docker-compose.prod.yml` (not the default `/docker-compose.yml`)
+2. **Environment Variables** tab -> add these (Production environment):
 
    | Variable | Value |
    |---|---|
-   | `ConnectionStrings__Default` | `Server=<mysql-internal-host>;Port=3306;Database=tsthrms_prod;User=tsthrms_app;Password=<strong-generated-password>;` |
-   | `Jwt__Key` | A random 64+ character secret (`openssl rand -base64 64`) - unique to this deployment, never the dev key from `appsettings.Development.json` |
-   | `Jwt__Issuer` / `Jwt__Audience` | Keep as `TSTHRMS` / `TSTHRMS.Client` unless you have a reason to change them |
-   | `Cors__AllowedOrigins__0` | Your Vercel URL, e.g. `https://tsthrms.vercel.app` (exact scheme + host, no trailing slash; add `__1`, `__2`, ... for additional origins - a custom domain and its `www.` variant, for example) |
-   | `SeedAdmin__Email` / `SeedAdmin__Password` | Set for the **first** deploy only - creates the initial HR Admin. The seed step is a no-op once any tenant exists, so leaving these set afterward is harmless but unnecessary. |
+   | `MYSQL_ROOT_PASSWORD` | A strong generated password |
+   | `MYSQL_DATABASE` | `tsthrms_prod` |
+   | `MYSQL_USER` | `tsthrms_app` |
+   | `MYSQL_PASSWORD` | A strong generated password (different from root's) |
+   | `JWT_KEY` | A random 64+ character secret (`openssl rand -base64 64`) - unique to this deployment, never the dev key from `appsettings.Development.json` |
+   | `FRONTEND_ORIGIN` | `https://hrms.example.com` (exact scheme + host, no trailing slash - this becomes the API's CORS-allowed origin) |
+   | `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` | Set for the **first** deploy only - creates the initial HR Admin. The seed step is a no-op once any tenant exists, so leaving these set afterward is harmless but unnecessary. |
 
-   `ASPNETCORE_ENVIRONMENT=Production` and `ASPNETCORE_URLS=http://+:8080` are already set in the
-   Dockerfile; override only if you have a specific reason to.
-5. **Health check**: path `/health`, port `8080` (a plain ASP.NET Core health check endpoint -
-   no database dependency, so it stays green even mid-migration).
-6. **Domain**: attach a domain (a custom subdomain, e.g. `api.yourdomain.com` via a CNAME/A
-   record, or Coolify's own generated domain) and enable Coolify's automatic Let's Encrypt
-   certificate. The API must be HTTPS for the cross-origin cookie to work at all.
-7. Deploy. Migrations and the initial seed run automatically on container startup
+3. **Persistent Storage** tab -> add a volume mounted at `/data` **on the `api` service**.
+   Uploaded documents (`/data/uploads`) and log files (`/data/logs`) both need to survive a
+   redeploy - without this volume, every deploy silently wipes every uploaded file, since the
+   rest of the container filesystem is ephemeral. Don't add a volume for `mysql_data` here -
+   that one's already a named Docker volume declared in the compose file itself.
+4. Save, then go back to **General** - after Coolify re-reads the compose file (click
+   **Reload Compose File** if the field doesn't appear yet) you should see a **"Domains for api"**
+   field (the same way "Domains for adminer" showed up for the local-dev compose file - Coolify
+   offers a domain field per service that has a `ports:` entry). Set it to
+   `api.hrms.example.com` and enable Coolify's automatic Let's Encrypt certificate. There should
+   be no domain field for `mysql` - it has no `ports:` entry on purpose, reachable only
+   internally by the `api` service at hostname `mysql`.
+5. **DNS**: point `api.hrms.example.com` at your Coolify server (A record to its IP, or whatever
+   record type Coolify's domain instructions specify).
+6. **Deploy**. Migrations and the initial seed run automatically on the `api` container's startup
    (`Program.cs`, guarded by `Database:MigrateOnStartup`, default `true` - idempotent, so later
-   redeploys just no-op past already-applied migrations). Set
-   `Database__MigrateOnStartup=false` if you'd rather run `dotnet ef database update` as a
-   separate, explicitly-reviewed step instead.
+   redeploys just no-op past already-applied migrations).
 
-## 3. Frontend on Vercel
+## 2. Frontend on Vercel
 
 1. Import this repository into Vercel as a new project.
 2. **Root Directory**: `frontend` (this is a monorepo - Vercel needs to know the SPA doesn't
    live at the repo root).
 3. **Framework Preset**: Vite (auto-detected once Root Directory is set correctly).
-4. **Environment Variable**: `VITE_API_URL` = your Coolify API's public HTTPS URL plus `/api`,
-   e.g. `https://api.yourdomain.com/api`. Without this, the built SPA falls back to a relative
-   `/api` path, which only resolves correctly in a same-origin deployment - not this one.
-5. Deploy. Optionally attach a custom domain in Vercel's project settings afterward; if you do,
-   add that domain to `Cors__AllowedOrigins` on the API too (step 2.4).
+4. **Environment Variable**: `VITE_API_URL` = `https://api.hrms.example.com/api`. Without this,
+   the built SPA falls back to a relative `/api` path, which only resolves correctly in a
+   same-origin deployment - not this one.
+5. Deploy, then **Settings -> Domains -> Add** `hrms.example.com`, and follow Vercel's DNS
+   instructions (a CNAME, typically). This must match `FRONTEND_ORIGIN` on the API (step 1.2)
+   exactly, or CORS will reject every request from the deployed frontend.
 
-## 4. First-deploy checklist
+## 3. First-deploy checklist
 
-- [ ] MySQL resource running; `tsthrms_app` user created with access to `tsthrms_prod`.
-- [ ] API deployed; `GET https://<api-domain>/health` returns `200`.
-- [ ] `Cors__AllowedOrigins__0` exactly matches the deployed Vercel URL (scheme + host, no path,
+- [ ] Coolify resource deployed; both `mysql` and `api` containers show as running (Logs tab).
+- [ ] `GET https://api.hrms.example.com/health` returns `200`.
+- [ ] `FRONTEND_ORIGIN` exactly matches the domain attached in Vercel (scheme + host, no path,
       no trailing slash) - a mismatch here fails silently as a browser CORS error, not a
       server-side one, so check the browser console first if login doesn't work.
-- [ ] `VITE_API_URL` on Vercel points at `https://<api-domain>/api` (note the `/api` suffix).
-- [ ] Log in from the deployed frontend using the `SeedAdmin` credentials, then reload the page -
-      a successful silent session restore on reload proves the cross-site refresh cookie is
-      actually being accepted by the browser (the part most likely to be subtly misconfigured).
-- [ ] Upload a test document, trigger a redeploy of the API, confirm the document is still
-      downloadable afterward - proves the `/data` volume is mounted correctly, not just present
-      in the Coolify config.
+- [ ] `VITE_API_URL` on Vercel points at `https://api.hrms.example.com/api` (note the `/api` suffix).
+- [ ] Log in from `https://hrms.example.com` using the `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD`
+      credentials, then reload the page - a successful silent session restore on reload proves
+      the cross-site refresh cookie is actually being accepted by the browser (the part most
+      likely to be subtly misconfigured).
+- [ ] Upload a test document, trigger a redeploy of the Coolify resource, confirm the document is
+      still downloadable afterward - proves the `/data` volume is mounted on the `api` service
+      correctly, not just present in the Coolify config.
 
-## 5. Ongoing deploys
+## 4. Ongoing deploys
 
 - **API**: push to the deployed branch (Coolify's git webhook auto-builds if enabled, or trigger
   a deploy manually from the Coolify UI). Migrations apply automatically on the new container's
