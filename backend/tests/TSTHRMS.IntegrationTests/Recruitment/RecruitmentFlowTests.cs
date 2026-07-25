@@ -128,6 +128,56 @@ public class RecruitmentFlowTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Applying_to_a_second_posting_surfaces_as_an_other_application_and_in_the_talent_pool()
+    {
+        await using var context = CreateContext(_tenantId);
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+        var applicantService = CreateApplicantService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+
+        var firstPosting = await PublishRequisitionAsync(managerService, hrService, "Senior Engineer");
+        var secondPosting = await PublishRequisitionAsync(managerService, hrService, "Staff Engineer");
+
+        var applyRequest = new PublicApplicationRequest(
+            "Ada", "Lovelace", "ada2@example.com", "9999999998", null, null, null, true);
+
+        using (var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray()))
+        {
+            var firstApply = await careerSiteService.ApplyAsync(
+                firstPosting.Slug, applyRequest, CandidateSource.CareerSite, resume, "resume.pdf", "application/pdf", resume.Length);
+            Assert.True(firstApply.Succeeded);
+        }
+
+        using (var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray()))
+        {
+            var secondApply = await careerSiteService.ApplyAsync(
+                secondPosting.Slug, applyRequest, CandidateSource.CareerSite, resume, "resume.pdf", "application/pdf", resume.Length);
+            Assert.True(secondApply.Succeeded);
+        }
+
+        var applicantsOnSecondPosting = await applicantService.GetForPostingAsync(secondPosting.Id);
+        var applicant = Assert.Single(applicantsOnSecondPosting!);
+        var otherApplication = Assert.Single(applicant.OtherApplications);
+        Assert.Equal(firstPosting.Id, otherApplication.JobPostingId);
+
+        await applicantService.SetTalentPoolAsync(applicant.CandidateId, true);
+        var talentPool = await applicantService.GetTalentPoolAsync();
+        var talentPoolEntry = Assert.Single(talentPool);
+        Assert.Equal("Staff Engineer", talentPoolEntry.MostRecentJobPostingTitle);
+    }
+
+    private async Task<JobPostingDto> PublishRequisitionAsync(
+        IJobRequisitionService managerService, IJobRequisitionService hrService, string title)
+    {
+        var requisition = await managerService.CreateAsync(BuildRequisitionRequest() with { Title = title });
+        await managerService.SubmitForApprovalAsync(requisition.Id);
+        await hrService.DecideAsync(requisition.Id, RequisitionApprovalDecision.Approved, new RequisitionDecisionRequest(null));
+        var published = await hrService.PublishAsync(requisition.Id, new PublishJobPostingRequest("Great role.", "Remote"));
+        return published!.JobPosting!;
+    }
+
+    [Fact]
     public async Task A_manager_only_sees_and_can_only_act_on_their_own_requisitions()
     {
         await using var context = CreateContext(_tenantId);

@@ -14,4 +14,8 @@ public interface IApplicantService
     /// <summary>Section 5's "Keep in mind" tag for a rejected-but-good candidate. False means the
     /// candidate wasn't found.</summary>
     Task<bool> SetTalentPoolAsync(Guid candidateId, bool isInTalentPool, CancellationToken cancellationToken = default);
+
+    /// <summary>Every candidate currently tagged "Keep in mind" (Section 5), tenant-wide -
+    /// HRAdmin/HRBP only, since it isn't scoped to any one requisition.</summary>
+    Task<IReadOnlyList<TalentPoolCandidateDto>> GetTalentPoolAsync(CancellationToken cancellationToken = default);
 }

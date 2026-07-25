@@ -7,6 +7,7 @@ import type {
   MoveApplicationStageRequest,
   PublishJobPostingRequest,
   RequisitionStatus,
+  TalentPoolCandidate,
 } from "./types"
 
 export async function getRequisitions(status?: RequisitionStatus): Promise<JobRequisitionListItem[]> {
@@ -80,6 +81,11 @@ export async function moveApplicationStage(
 
 export async function setTalentPool(candidateId: string, isInTalentPool: boolean): Promise<void> {
   await apiClient.post(`/recruitment/candidates/${candidateId}/talent-pool`, isInTalentPool)
+}
+
+export async function getTalentPool(): Promise<TalentPoolCandidate[]> {
+  const { data } = await apiClient.get<TalentPoolCandidate[]>("/recruitment/candidates/talent-pool")
+  return data
 }
 
 export async function getCurrentTenant(): Promise<{ id: string; name: string; slug: string }> {

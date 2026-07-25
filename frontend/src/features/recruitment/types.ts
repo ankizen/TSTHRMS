@@ -91,6 +91,14 @@ export interface PublishJobPostingRequest {
   location: string | null
 }
 
+export interface CandidateOtherApplication {
+  applicationId: string
+  jobPostingId: string
+  jobPostingTitle: string
+  stage: ApplicationStage
+  appliedAt: string
+}
+
 export interface ApplicantListItem {
   applicationId: string
   candidateId: string
@@ -108,11 +116,24 @@ export interface ApplicantListItem {
   stageChangedAt: string
   rejectionReason: string | null
   appliedAt: string
+  otherApplications: CandidateOtherApplication[]
 }
 
 export interface MoveApplicationStageRequest {
   stage: ApplicationStage
   reason: string | null
+}
+
+export interface TalentPoolCandidate {
+  candidateId: string
+  firstName: string
+  lastName: string
+  email: string
+  phone: string
+  resumeDocumentId: string | null
+  mostRecentJobPostingTitle: string | null
+  mostRecentStage: ApplicationStage | null
+  mostRecentAppliedAt: string | null
 }
 
 export type { Lookup }

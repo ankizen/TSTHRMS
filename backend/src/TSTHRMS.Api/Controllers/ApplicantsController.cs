@@ -37,4 +37,12 @@ public class ApplicantsController(IApplicantService applicantService) : Controll
         var success = await applicantService.SetTalentPoolAsync(candidateId, isInTalentPool, cancellationToken);
         return success ? NoContent() : NotFound();
     }
+
+    [HttpGet("api/recruitment/candidates/talent-pool")]
+    [Authorize(Roles = $"{RoleNames.HRAdmin},{RoleNames.HRBP}")]
+    public async Task<ActionResult<IReadOnlyList<TalentPoolCandidateDto>>> GetTalentPool(CancellationToken cancellationToken)
+    {
+        var candidates = await applicantService.GetTalentPoolAsync(cancellationToken);
+        return Ok(candidates);
+    }
 }

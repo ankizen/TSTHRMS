@@ -135,6 +135,27 @@ public record ApplicantListItemDto(
     ApplicationStage Stage,
     DateTimeOffset StageChangedAt,
     string? RejectionReason,
-    DateTimeOffset AppliedAt);
+    DateTimeOffset AppliedAt,
+    IReadOnlyList<CandidateOtherApplicationDto> OtherApplications);
+
+/// <summary>Section 3's duplicate detection, surfaced the other direction: when HR is looking
+/// at one application, show the candidate's other in-flight applications so history isn't
+/// missed just because they applied to a second role.</summary>
+public record CandidateOtherApplicationDto(
+    Guid ApplicationId, Guid JobPostingId, string JobPostingTitle, ApplicationStage Stage, DateTimeOffset AppliedAt);
 
 public record MoveApplicationStageRequest(ApplicationStage Stage, string? Reason);
+
+/// <summary>Section 5's "Keep in mind" list - a rejected-but-good candidate tagged for future
+/// openings. Shows their most recent application so HR has context without re-opening the
+/// original posting's pipeline.</summary>
+public record TalentPoolCandidateDto(
+    Guid CandidateId,
+    string FirstName,
+    string LastName,
+    string Email,
+    string Phone,
+    Guid? ResumeDocumentId,
+    string? MostRecentJobPostingTitle,
+    ApplicationStage? MostRecentStage,
+    DateTimeOffset? MostRecentAppliedAt);

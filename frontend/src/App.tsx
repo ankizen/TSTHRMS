@@ -17,6 +17,7 @@ import { OrgChartPage } from "@/features/org-chart/org-chart-page"
 import { ApplicantsPage } from "@/features/recruitment/applicants-page"
 import { RequisitionDetailPage } from "@/features/recruitment/requisition-detail-page"
 import { RequisitionsListPage } from "@/features/recruitment/requisitions-list-page"
+import { TalentPoolPage } from "@/features/recruitment/talent-pool-page"
 import { refreshAccessToken } from "@/lib/api-client"
 import { DashboardPage } from "@/pages/dashboard-page"
 import { LoginPage } from "@/pages/login-page"
@@ -50,6 +51,7 @@ export function App() {
         <Route path="/recruitment/requisitions" element={<RequisitionsListPage />} />
         <Route path="/recruitment/requisitions/:id" element={<RequisitionDetailPage />} />
         <Route path="/recruitment/postings/:jobPostingId/applicants" element={<ApplicantsPage />} />
+        <Route path="/recruitment/talent-pool" element={<TalentPoolPage />} />
         <Route path="/my/profile" element={<MyProfilePage />} />
         <Route path="/my/team" element={<MyTeamPage />} />
         <Route path="/admin/users" element={<UsersPage />} />

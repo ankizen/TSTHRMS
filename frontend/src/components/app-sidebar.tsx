@@ -1,4 +1,4 @@
-import { Briefcase, Building2, ClipboardCheck, KeyRound, LayoutDashboard, Network, SlidersHorizontal, UserCog, Users, UsersRound } from "lucide-react"
+import { Briefcase, Building2, ClipboardCheck, KeyRound, LayoutDashboard, Network, SlidersHorizontal, Star, UserCog, Users, UsersRound } from "lucide-react"
 import { NavLink, useLocation } from "react-router-dom"
 import {
   Sidebar,
@@ -20,6 +20,7 @@ const navItems = [
   { title: "Employees", url: "/employees", icon: Users, end: false, roles: ["HRAdmin", "HRBP"] },
   { title: "Org Chart", url: "/org-chart", icon: Network, end: false, roles: ["HRAdmin", "HRBP"] },
   { title: "Requisitions", url: "/recruitment/requisitions", icon: Briefcase, end: false, roles: ["HRAdmin", "HRBP", "Manager"] },
+  { title: "Talent Pool", url: "/recruitment/talent-pool", icon: Star, end: false, roles: ["HRAdmin", "HRBP"] },
   { title: "My Profile", url: "/my/profile", icon: UserCog, end: false, roles: undefined },
   { title: "My Team", url: "/my/team", icon: UsersRound, end: false, roles: ["Manager"] },
   { title: "Edit Requests", url: "/admin/edit-requests", icon: ClipboardCheck, end: false, roles: ["HRAdmin", "HRBP"] },
