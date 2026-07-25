@@ -282,4 +282,47 @@ export interface PublicAssessment {
   alreadySubmitted: boolean
 }
 
+export type OfferStatus = "Draft" | "PendingApproval" | "Approved" | "Sent" | "Accepted" | "Declined" | "Expired"
+
+export interface OfferVersion {
+  versionNumber: number
+  designation: string | null
+  dateOfJoining: string
+  annualCtc: number
+  fixedComponent: number | null
+  variableComponent: number | null
+  joiningBonus: number | null
+  offerLetterText: string | null
+  revisionReason: string | null
+  createdAt: string
+}
+
+export interface Offer {
+  id: string
+  applicationId: string
+  status: OfferStatus
+  sentAt: string | null
+  expiresAt: string | null
+  respondedAt: string | null
+  declineReason: string | null
+  approvedByUserId: string | null
+  approvedAt: string | null
+  versions: OfferVersion[]
+}
+
+export interface CreateOrReviseOfferRequest {
+  designation: string | null
+  dateOfJoining: string
+  annualCtc: number
+  fixedComponent: number | null
+  variableComponent: number | null
+  joiningBonus: number | null
+  offerLetterText: string | null
+  revisionReason: string | null
+}
+
+export interface SendOfferRequest {
+  responseWindowDays: number
+}
+
 export type { Lookup }

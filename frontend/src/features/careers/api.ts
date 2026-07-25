@@ -7,6 +7,7 @@ import type {
   PublicJobDetail,
   PublicJobFilter,
   PublicJobListItem,
+  PublicOffer,
 } from "./types"
 
 export async function getCompany(tenantSlug: string): Promise<PublicCompany> {
@@ -57,4 +58,15 @@ export async function getPublicAssessment(tenantSlug: string, token: string): Pr
 
 export async function submitPublicAssessment(tenantSlug: string, token: string, submissionText: string): Promise<void> {
   await publicApiClient.post(`/public/${tenantSlug}/assessments/${token}/submit`, { submissionText })
+}
+
+export async function getPublicOffer(tenantSlug: string, token: string): Promise<PublicOffer> {
+  const { data } = await publicApiClient.get<PublicOffer>(`/public/${tenantSlug}/offers/${token}`)
+  return data
+}
+
+export async function respondToPublicOffer(
+  tenantSlug: string, token: string, accepted: boolean, declineReason: string | null,
+): Promise<void> {
+  await publicApiClient.post(`/public/${tenantSlug}/offers/${token}/respond`, { accepted, declineReason })
 }

@@ -9,6 +9,7 @@ import { AssessmentPage } from "@/features/careers/assessment-page"
 import { CareerDetailPage } from "@/features/careers/career-detail-page"
 import { CareerListPage } from "@/features/careers/career-list-page"
 import { CareersLayout } from "@/features/careers/careers-layout"
+import { OfferPage } from "@/features/careers/offer-page"
 import { BulkImportPage } from "@/features/employees/bulk-import/bulk-import-page"
 import { EmployeeFormPage } from "@/features/employees/employee-form-page"
 import { EmployeeListPage } from "@/features/employees/employee-list-page"
@@ -36,6 +37,7 @@ export function App() {
       <Route path="/careers/:tenantSlug" element={<CareersLayout />}>
         <Route index element={<CareerListPage />} />
         <Route path="assessment/:token" element={<AssessmentPage />} />
+        <Route path="offer/:token" element={<OfferPage />} />
         <Route path=":jobSlug" element={<CareerDetailPage />} />
       </Route>
       <Route

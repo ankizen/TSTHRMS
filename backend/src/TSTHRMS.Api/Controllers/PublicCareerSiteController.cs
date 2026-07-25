@@ -18,7 +18,7 @@ namespace TSTHRMS.Api.Controllers;
 [AllowAnonymous]
 [ResolvePublicTenant]
 public class PublicCareerSiteController(
-    ICareerSiteService careerSiteService, IAssessmentService assessmentService,
+    ICareerSiteService careerSiteService, IAssessmentService assessmentService, IOfferService offerService,
     IApplicationDbContext dbContext, ITenantContext tenantContext) : ControllerBase
 {
     private const long MaxResumeSizeBytes = 10 * 1024 * 1024;
@@ -78,6 +78,21 @@ public class PublicCareerSiteController(
     {
         var succeeded = await assessmentService.SubmitPublicAssessmentAsync(token, request, cancellationToken);
         return succeeded ? NoContent() : BadRequest(new { error = "This assessment can no longer be submitted." });
+    }
+
+    [HttpGet("offers/{token}")]
+    public async Task<ActionResult<PublicOfferDto>> GetOffer(string tenantSlug, string token, CancellationToken cancellationToken)
+    {
+        var offer = await offerService.GetPublicOfferAsync(token, cancellationToken);
+        return offer is null ? NotFound() : Ok(offer);
+    }
+
+    [HttpPost("offers/{token}/respond")]
+    public async Task<IActionResult> RespondToOffer(
+        string tenantSlug, string token, PublicOfferDecisionRequest request, CancellationToken cancellationToken)
+    {
+        var succeeded = await offerService.RespondPublicOfferAsync(token, request, cancellationToken);
+        return succeeded ? NoContent() : BadRequest(new { error = "This offer can no longer be responded to." });
     }
 }
 

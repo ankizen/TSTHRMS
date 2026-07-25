@@ -62,3 +62,20 @@ export interface PublicAssessment {
   isExpired: boolean
   alreadySubmitted: boolean
 }
+
+export type PublicOfferStatus = "Draft" | "PendingApproval" | "Approved" | "Sent" | "Accepted" | "Declined" | "Expired"
+
+export interface PublicOffer {
+  candidateName: string
+  jobTitle: string
+  designation: string | null
+  dateOfJoining: string
+  annualCtc: number
+  fixedComponent: number | null
+  variableComponent: number | null
+  joiningBonus: number | null
+  offerLetterText: string | null
+  expiresAt: string
+  isExpired: boolean
+  status: PublicOfferStatus
+}

@@ -339,6 +339,116 @@ public class RecruitmentFlowTests : IAsyncLifetime
         Assert.False(applicantAssessment.Passed);
     }
 
+    [Fact]
+    public async Task Offer_revision_resets_approval_and_accept_moves_the_application_to_offer_accepted()
+    {
+        await using var context = CreateContext(_tenantId);
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+        var hrOfferService = CreateOfferService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Product Manager");
+
+        using var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray());
+        var applyRequest = new PublicApplicationRequest(
+            "Alan", "Turing", "alan@example.com", "9999999995", null, null, null, true);
+        var applyResult = await careerSiteService.ApplyAsync(
+            posting.Slug, applyRequest, CandidateSource.CareerSite, resume, "resume.pdf", "application/pdf", resume.Length);
+        var applicationId = applyResult.ApplicationId!.Value;
+
+        var created = await hrOfferService.CreateAsync(
+            applicationId,
+            new CreateOrReviseOfferRequest("Product Manager", new DateOnly(2026, 9, 1), 2000000m, 1600000m, 400000m, null, null, null));
+        Assert.NotNull(created);
+        Assert.Equal(OfferStatus.Draft, created!.Status);
+        Assert.Single(created.Versions);
+
+        // A second offer for the same application is rejected - revise the existing one instead.
+        var duplicateCreate = await hrOfferService.CreateAsync(
+            applicationId, new CreateOrReviseOfferRequest(null, new DateOnly(2026, 9, 1), 100m, null, null, null, null, null));
+        Assert.Null(duplicateCreate);
+
+        var submitted = await hrOfferService.SubmitForApprovalAsync(created.Id);
+        Assert.Equal(OfferStatus.PendingApproval, submitted!.Status);
+
+        var approved = await hrOfferService.ApproveAsync(created.Id, new OfferDecisionRequest("Looks good"));
+        Assert.Equal(OfferStatus.Approved, approved!.Status);
+
+        // Revising an approved offer resets it to Draft - a changed CTC needs re-approval.
+        var revised = await hrOfferService.ReviseAsync(
+            created.Id,
+            new CreateOrReviseOfferRequest("Senior Product Manager", new DateOnly(2026, 9, 1), 2200000m, 1700000m, 500000m, null, null, "Candidate negotiated"));
+        Assert.Equal(OfferStatus.Draft, revised!.Status);
+        Assert.Equal(2, revised.Versions.Count);
+
+        await hrOfferService.SubmitForApprovalAsync(created.Id);
+        await hrOfferService.ApproveAsync(created.Id, new OfferDecisionRequest(null));
+        var sent = await hrOfferService.SendAsync(created.Id, new SendOfferRequest(7));
+        Assert.Equal(OfferStatus.Sent, sent!.Status);
+        Assert.NotNull(sent.ExpiresAt);
+
+        var offerToken = await context.Offers.Where(o => o.ApplicationId == applicationId).Select(o => o.Token).SingleAsync();
+
+        var publicOffer = await hrOfferService.GetPublicOfferAsync(offerToken);
+        Assert.NotNull(publicOffer);
+        Assert.False(publicOffer!.IsExpired);
+        Assert.Equal(2200000m, publicOffer.AnnualCtc);
+        Assert.Equal("Senior Product Manager", publicOffer.Designation);
+
+        var accepted = await hrOfferService.RespondPublicOfferAsync(offerToken, new PublicOfferDecisionRequest(true, null));
+        Assert.True(accepted);
+
+        var application = await context.Applications.AsNoTracking().SingleAsync(a => a.Id == applicationId);
+        Assert.Equal(ApplicationStage.OfferAccepted, application.Stage);
+
+        // Responding again is rejected - the offer is no longer in the Sent state.
+        var secondResponse = await hrOfferService.RespondPublicOfferAsync(offerToken, new PublicOfferDecisionRequest(false, "Changed my mind"));
+        Assert.False(secondResponse);
+    }
+
+    [Fact]
+    public async Task Declining_an_offer_rejects_the_application_with_the_decline_reason()
+    {
+        await using var context = CreateContext(_tenantId);
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+        var hrOfferService = CreateOfferService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+
+        var posting = await PublishRequisitionAsync(managerService, hrService, "QA Engineer");
+
+        using var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray());
+        var applyRequest = new PublicApplicationRequest(
+            "Katherine", "Johnson", "katherine@example.com", "9999999994", null, null, null, true);
+        var applyResult = await careerSiteService.ApplyAsync(
+            posting.Slug, applyRequest, CandidateSource.CareerSite, resume, "resume.pdf", "application/pdf", resume.Length);
+        var applicationId = applyResult.ApplicationId!.Value;
+
+        var offer = await hrOfferService.CreateAsync(
+            applicationId, new CreateOrReviseOfferRequest("QA Engineer", new DateOnly(2026, 9, 15), 1200000m, null, null, null, null, null));
+        await hrOfferService.SubmitForApprovalAsync(offer!.Id);
+        await hrOfferService.ApproveAsync(offer.Id, new OfferDecisionRequest(null));
+        await hrOfferService.SendAsync(offer.Id, new SendOfferRequest(7));
+
+        var token = await context.Offers.Where(o => o.ApplicationId == applicationId).Select(o => o.Token).SingleAsync();
+
+        var declined = await hrOfferService.RespondPublicOfferAsync(
+            token, new PublicOfferDecisionRequest(false, "Accepted a counter-offer"));
+        Assert.True(declined);
+
+        var application = await context.Applications.AsNoTracking().SingleAsync(a => a.Id == applicationId);
+        Assert.Equal(ApplicationStage.Rejected, application.Stage);
+        Assert.Contains("Accepted a counter-offer", application.RejectionReason);
+
+        var finalOffer = await hrOfferService.GetForApplicationAsync(applicationId);
+        Assert.Equal(OfferStatus.Declined, finalOffer!.Status);
+    }
+
+    private OfferService CreateOfferService(ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles) =>
+        new(context, new TestTenantContext(_tenantId), new TestCurrentUserService(userId, roles),
+            new NoOpFrontendLinkBuilder(), new NoOpEmailSender(), NullLogger<OfferService>.Instance);
+
     private AssessmentService CreateAssessmentService(ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles) =>
         new(context, new TestTenantContext(_tenantId), new TestCurrentUserService(userId, roles),
             new NoOpFrontendLinkBuilder(), new NoOpEmailSender(), NullLogger<AssessmentService>.Instance);
@@ -422,5 +532,8 @@ public class RecruitmentFlowTests : IAsyncLifetime
     {
         public string BuildCareerSiteAssessmentLink(string tenantSlug, string token) =>
             $"https://example.test/careers/{tenantSlug}/assessment/{token}";
+
+        public string BuildCareerSiteOfferLink(string tenantSlug, string token) =>
+            $"https://example.test/careers/{tenantSlug}/offer/{token}";
     }
 }

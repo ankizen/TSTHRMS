@@ -50,6 +50,8 @@ public class ApplicationDbContext(
     public DbSet<InterviewPanelist> InterviewPanelists => Set<InterviewPanelist>();
     public DbSet<InterviewScorecard> InterviewScorecards => Set<InterviewScorecard>();
     public DbSet<AssessmentSubmission> AssessmentSubmissions => Set<AssessmentSubmission>();
+    public DbSet<Offer> Offers => Set<Offer>();
+    public DbSet<OfferVersion> OfferVersions => Set<OfferVersion>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

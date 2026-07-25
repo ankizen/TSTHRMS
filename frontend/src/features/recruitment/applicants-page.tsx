@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { AlertCircle, ArrowLeft, CalendarClock, FileCheck2, Star, UsersRound } from "lucide-react"
+import { AlertCircle, ArrowLeft, Banknote, CalendarClock, FileCheck2, Star, UsersRound } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useNavigate, useParams } from "react-router-dom"
@@ -22,6 +22,7 @@ import {
 import { APPLICATION_STAGE_LABELS, APPLICATION_STAGE_OPTIONS } from "./constants"
 import { InterviewsSheet } from "./interviews-sheet"
 import { MoveStageDialog } from "./move-stage-dialog"
+import { OfferSheet } from "./offer-sheet"
 import { ScoreAssessmentDialog } from "./score-assessment-dialog"
 import type { ApplicantListItem, ApplicationStage, AssessmentSummary } from "./types"
 
@@ -35,6 +36,7 @@ export function ApplicantsPage() {
 
   const [pendingMove, setPendingMove] = useState<{ applicationId: string; stage: ApplicationStage } | null>(null)
   const [interviewsFor, setInterviewsFor] = useState<{ applicationId: string; candidateName: string } | null>(null)
+  const [offerFor, setOfferFor] = useState<{ applicationId: string; candidateName: string } | null>(null)
   const [scoringAssessment, setScoringAssessment] = useState<AssessmentSummary | null>(null)
 
   const { data: applicants, isLoading } = useQuery({
@@ -167,6 +169,12 @@ export function ApplicantsPage() {
                     }
                     onSendAssessment={() => sendAssessmentMutation.mutate(applicant.applicationId)}
                     onScoreAssessment={() => setScoringAssessment(applicant.assessment)}
+                    onOpenOffer={() =>
+                      setOfferFor({
+                        applicationId: applicant.applicationId,
+                        candidateName: `${applicant.firstName} ${applicant.lastName}`,
+                      })
+                    }
                   />
                 ))}
               </div>
@@ -189,6 +197,12 @@ export function ApplicantsPage() {
         onOpenChange={(open) => !open && setInterviewsFor(null)}
       />
 
+      <OfferSheet
+        applicationId={offerFor?.applicationId ?? null}
+        candidateName={offerFor?.candidateName ?? null}
+        onOpenChange={(open) => !open && setOfferFor(null)}
+      />
+
       <ScoreAssessmentDialog
         assessment={scoringAssessment}
         onOpenChange={(open) => !open && setScoringAssessment(null)}
@@ -203,7 +217,8 @@ export function ApplicantsPage() {
 }
 
 function ApplicantCard({
-  applicant, isAssessmentEnabled, onStageChange, onToggleTalentPool, onOpenInterviews, onSendAssessment, onScoreAssessment,
+  applicant, isAssessmentEnabled, onStageChange, onToggleTalentPool, onOpenInterviews, onSendAssessment,
+  onScoreAssessment, onOpenOffer,
 }: {
   applicant: ApplicantListItem
   isAssessmentEnabled: boolean
@@ -212,6 +227,7 @@ function ApplicantCard({
   onOpenInterviews: () => void
   onSendAssessment: () => void
   onScoreAssessment: () => void
+  onOpenOffer: () => void
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-xl border bg-card p-3 shadow-sm">
@@ -303,10 +319,16 @@ function ApplicantCard({
         </SelectContent>
       </Select>
 
-      <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onOpenInterviews}>
-        <CalendarClock className="size-3.5" />
-        Interviews
-      </Button>
+      <div className="flex gap-2">
+        <Button type="button" variant="outline" size="sm" className="h-8 flex-1 text-xs" onClick={onOpenInterviews}>
+          <CalendarClock className="size-3.5" />
+          Interviews
+        </Button>
+        <Button type="button" variant="outline" size="sm" className="h-8 flex-1 text-xs" onClick={onOpenOffer}>
+          <Banknote className="size-3.5" />
+          Offer
+        </Button>
+      </div>
     </div>
   )
 }

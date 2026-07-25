@@ -88,6 +88,7 @@ public static class DependencyInjection
         services.Configure<FrontendOptions>(configuration.GetSection(FrontendOptions.SectionName));
         services.AddScoped<IFrontendLinkBuilder, FrontendLinkBuilder>();
         services.AddScoped<IAssessmentService, AssessmentService>();
+        services.AddScoped<IOfferService, OfferService>();
 
         return services;
     }

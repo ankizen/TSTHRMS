@@ -2,6 +2,7 @@ import { apiClient } from "@/lib/api-client"
 import type {
   ApplicantListItem,
   AssessmentDetail,
+  CreateOrReviseOfferRequest,
   Interview,
   InterviewerCandidate,
   InterviewScorecard,
@@ -10,12 +11,14 @@ import type {
   JobRequisitionWriteRequest,
   MoveApplicationStageRequest,
   MyInterview,
+  Offer,
   PublishJobPostingRequest,
   RequisitionStatus,
   RescheduleInterviewRequest,
   ScheduleInterviewRequest,
   ScoreAssessmentRequest,
   SendAssessmentResult,
+  SendOfferRequest,
   SubmitScorecardRequest,
   TalentPoolCandidate,
   TestConfiguration,
@@ -169,5 +172,39 @@ export async function scoreAssessment(
   const { data } = await apiClient.post<AssessmentDetail>(
     `/recruitment/assessments/${assessmentSubmissionId}/score`, request,
   )
+  return data
+}
+
+export async function getOffer(applicationId: string): Promise<Offer | null> {
+  try {
+    const { data } = await apiClient.get<Offer>(`/recruitment/applications/${applicationId}/offer`)
+    return data
+  } catch {
+    return null
+  }
+}
+
+export async function createOffer(applicationId: string, request: CreateOrReviseOfferRequest): Promise<Offer> {
+  const { data } = await apiClient.post<Offer>(`/recruitment/applications/${applicationId}/offer`, request)
+  return data
+}
+
+export async function reviseOffer(offerId: string, request: CreateOrReviseOfferRequest): Promise<Offer> {
+  const { data } = await apiClient.put<Offer>(`/recruitment/offers/${offerId}`, request)
+  return data
+}
+
+export async function submitOffer(offerId: string): Promise<Offer> {
+  const { data } = await apiClient.post<Offer>(`/recruitment/offers/${offerId}/submit`)
+  return data
+}
+
+export async function approveOffer(offerId: string, comment: string | null): Promise<Offer> {
+  const { data } = await apiClient.post<Offer>(`/recruitment/offers/${offerId}/approve`, { comment })
+  return data
+}
+
+export async function sendOffer(offerId: string, request: SendOfferRequest): Promise<Offer> {
+  const { data } = await apiClient.post<Offer>(`/recruitment/offers/${offerId}/send`, request)
   return data
 }

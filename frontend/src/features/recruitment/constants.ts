@@ -3,6 +3,7 @@ import type {
   InterviewRecommendation,
   InterviewRound,
   InterviewStatus,
+  OfferStatus,
   RequisitionReason,
   RequisitionStatus,
 } from "./types"
@@ -79,3 +80,23 @@ export const INTERVIEW_RECOMMENDATION_OPTIONS: { value: InterviewRecommendation;
 export const INTERVIEW_RECOMMENDATION_LABELS: Record<InterviewRecommendation, string> = Object.fromEntries(
   INTERVIEW_RECOMMENDATION_OPTIONS.map((option) => [option.value, option.label]),
 ) as Record<InterviewRecommendation, string>
+
+export const OFFER_STATUS_LABELS: Record<OfferStatus, string> = {
+  Draft: "Draft",
+  PendingApproval: "Pending Approval",
+  Approved: "Approved",
+  Sent: "Sent",
+  Accepted: "Accepted",
+  Declined: "Declined",
+  Expired: "Expired",
+}
+
+export const OFFER_STATUS_BADGE_VARIANT: Record<OfferStatus, "default" | "secondary" | "outline" | "destructive"> = {
+  Draft: "outline",
+  PendingApproval: "secondary",
+  Approved: "default",
+  Sent: "secondary",
+  Accepted: "default",
+  Declined: "destructive",
+  Expired: "destructive",
+}

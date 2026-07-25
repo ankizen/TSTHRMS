@@ -7,4 +7,7 @@ public class FrontendLinkBuilder(IOptions<FrontendOptions> options) : IFrontendL
 {
     public string BuildCareerSiteAssessmentLink(string tenantSlug, string token) =>
         $"{options.Value.BaseUrl.TrimEnd('/')}/careers/{tenantSlug}/assessment/{token}";
+
+    public string BuildCareerSiteOfferLink(string tenantSlug, string token) =>
+        $"{options.Value.BaseUrl.TrimEnd('/')}/careers/{tenantSlug}/offer/{token}";
 }

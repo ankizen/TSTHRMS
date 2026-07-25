@@ -282,3 +282,59 @@ public record PublicAssessmentDto(
     bool AlreadySubmitted);
 
 public record PublicAssessmentSubmissionRequest(string SubmissionText);
+
+// ---- Offer Management (Section 8) ----
+
+public record OfferVersionDto(
+    int VersionNumber,
+    string? Designation,
+    DateOnly DateOfJoining,
+    decimal AnnualCtc,
+    decimal? FixedComponent,
+    decimal? VariableComponent,
+    decimal? JoiningBonus,
+    string? OfferLetterText,
+    string? RevisionReason,
+    DateTimeOffset CreatedAt);
+
+public record OfferDto(
+    Guid Id,
+    Guid ApplicationId,
+    OfferStatus Status,
+    DateTimeOffset? SentAt,
+    DateTimeOffset? ExpiresAt,
+    DateTimeOffset? RespondedAt,
+    string? DeclineReason,
+    Guid? ApprovedByUserId,
+    DateTimeOffset? ApprovedAt,
+    IReadOnlyList<OfferVersionDto> Versions);
+
+public record CreateOrReviseOfferRequest(
+    string? Designation,
+    DateOnly DateOfJoining,
+    decimal AnnualCtc,
+    decimal? FixedComponent,
+    decimal? VariableComponent,
+    decimal? JoiningBonus,
+    string? OfferLetterText,
+    string? RevisionReason);
+
+public record OfferDecisionRequest(string? Comment);
+
+public record SendOfferRequest(int ResponseWindowDays);
+
+public record PublicOfferDto(
+    string CandidateName,
+    string JobTitle,
+    string? Designation,
+    DateOnly DateOfJoining,
+    decimal AnnualCtc,
+    decimal? FixedComponent,
+    decimal? VariableComponent,
+    decimal? JoiningBonus,
+    string? OfferLetterText,
+    DateTimeOffset ExpiresAt,
+    bool IsExpired,
+    OfferStatus Status);
+
+public record PublicOfferDecisionRequest(bool Accepted, string? DeclineReason);

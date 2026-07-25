@@ -8,4 +8,6 @@ namespace TSTHRMS.Application.Common.Interfaces;
 public interface IFrontendLinkBuilder
 {
     string BuildCareerSiteAssessmentLink(string tenantSlug, string token);
+
+    string BuildCareerSiteOfferLink(string tenantSlug, string token);
 }
