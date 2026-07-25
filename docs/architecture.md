@@ -67,6 +67,38 @@ Implementation (`TSTHRMS.Infrastructure/Persistence/ApplicationDbContext.cs`):
 - Roles are fixed to the Core HR spec's 4 access levels: `HRAdmin`, `HRBP`, `Manager`, `Employee`
   (`TSTHRMS.Application/Common/RoleNames.cs`).
 
+## Access control (Section 14)
+
+The 4 roles are enforced at the API layer, not just hidden in the UI - `EmployeesController` and
+its DTO-shaped children (`export`, `org-chart`, `audit-log`, `documents`) are restricted to
+`HRAdmin`/`HRBP`. Manager and Employee never touch that surface at all; they get their own
+`/api/my/*` endpoints (`MyProfileController`) that always resolve "who" from the caller's own
+`employee_id` JWT claim, never a route parameter - there's no id to spoof.
+
+- **HRBP scope**: `ApplicationUser.AssignedLegalEntityId`/`AssignedProductId` (set at account
+  creation, `UsersController`) narrow an HRBP to a single legal entity and/or product; null on
+  either means unrestricted on that dimension. `EmployeeService.ApplyHrbpScope` filters every list
+  query and `IsHrbpOutOfScope` blocks every single-record read/write (`GetById`, `Create`,
+  `Update`, status changes, bank-account reveal) - a scoped HRBP just gets "not found" for a
+  record outside their scope, not a distinct "forbidden" response, so scope can't be probed by
+  observing the difference. HRAdmin is exempt from every check.
+- **Manager**: read-only access to direct reports (`Employee.ReportingManagerId` match) via
+  `MyProfileService.GetDirectReportsAsync`, returned as `DirectReportSummaryDto` - a deliberately
+  narrow projection (no salary, no bank details, no address/emergency contact) rather than the
+  full `EmployeeDto` HR sees.
+- **Employee self-service**: `GetOwnProfileAsync` reuses the same masked `EmployeeDto` HR sees for
+  the caller's own record (read-only). A small whitelist of contact/emergency fields
+  (`EditableEmployeeField`) can be changed only by submitting an `EmployeeEditRequest` through
+  `IEmployeeEditRequestService.SubmitAsync`; HR approves or rejects via
+  `EmployeeEditRequestsController` (same HRBP-scope rule as everywhere else). Approving applies the
+  change through an explicit `switch` over the field enum, not a generic reflection-based setter,
+  so a request can never target a field outside the whitelist.
+- **User provisioning**: there is no self-registration. `UsersController` (HRAdmin-only) creates a
+  login for an *existing* Employee record and assigns its role (and, for HRBP, its scope) -
+  `IUserManagementService`/`UserManagementService` mirror the `IAuthService`/`AuthService` split
+  (interface in Application, `UserManager<ApplicationUser>`-backed implementation in
+  Infrastructure) since only Infrastructure may reference Identity types.
+
 ## File storage
 
 `IFileStorageService` stores bytes behind an opaque, always-server-generated key (never a

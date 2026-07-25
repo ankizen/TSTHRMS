@@ -5,12 +5,17 @@ namespace TSTHRMS.Api.Services;
 
 public class CurrentUserService(IHttpContextAccessor httpContextAccessor) : ICurrentUserService
 {
-    public Guid? UserId
+    public Guid? UserId => ParseGuidClaim(ClaimTypes.NameIdentifier);
+    public Guid? EmployeeId => ParseGuidClaim("employee_id");
+    public Guid? AssignedLegalEntityId => ParseGuidClaim("assigned_legal_entity_id");
+    public Guid? AssignedProductId => ParseGuidClaim("assigned_product_id");
+
+    public IReadOnlyCollection<string> Roles =>
+        httpContextAccessor.HttpContext?.User.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray() ?? [];
+
+    private Guid? ParseGuidClaim(string claimType)
     {
-        get
-        {
-            var claim = httpContextAccessor.HttpContext?.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            return claim is not null && Guid.TryParse(claim, out var id) ? id : null;
-        }
+        var claim = httpContextAccessor.HttpContext?.User.FindFirst(claimType)?.Value;
+        return claim is not null && Guid.TryParse(claim, out var id) ? id : null;
     }
 }

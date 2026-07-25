@@ -7,9 +7,14 @@ using TSTHRMS.Domain.Employees;
 
 namespace TSTHRMS.Api.Controllers;
 
+/// <summary>
+/// Section 14: full employee records are an HR-only surface. Managers see their direct reports
+/// (restricted fields) and Employees see their own record via the separate /api/my endpoints
+/// (MyProfileController) instead of these - not just hidden in the UI, but unreachable here.
+/// </summary>
 [ApiController]
 [Route("api/employees")]
-[Authorize]
+[Authorize(Roles = $"{RoleNames.HRAdmin},{RoleNames.HRBP}")]
 public class EmployeesController(IEmployeeService employeeService) : ControllerBase
 {
     private const string HrWriteRoles = $"{RoleNames.HRAdmin},{RoleNames.HRBP}";
@@ -50,7 +55,7 @@ public class EmployeesController(IEmployeeService employeeService) : ControllerB
     public async Task<ActionResult<EmployeeDto>> Create(EmployeeWriteRequest request, CancellationToken cancellationToken)
     {
         var employee = await employeeService.CreateAsync(request, cancellationToken);
-        return CreatedAtAction(nameof(GetById), new { id = employee.Id }, employee);
+        return employee is null ? Forbid() : CreatedAtAction(nameof(GetById), new { id = employee.Id }, employee);
     }
 
     [HttpPut("{id:guid}")]

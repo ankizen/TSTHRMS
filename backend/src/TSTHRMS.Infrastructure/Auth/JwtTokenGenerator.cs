@@ -26,6 +26,22 @@ public class JwtTokenGenerator(IOptions<JwtSettings> options)
         };
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
+        if (user.EmployeeId is not null)
+        {
+            claims.Add(new Claim("employee_id", user.EmployeeId.Value.ToString()));
+        }
+
+        // HRBP-only scope narrowing - see ApplicationUser.AssignedLegalEntityId/AssignedProductId.
+        if (user.AssignedLegalEntityId is not null)
+        {
+            claims.Add(new Claim("assigned_legal_entity_id", user.AssignedLegalEntityId.Value.ToString()));
+        }
+
+        if (user.AssignedProductId is not null)
+        {
+            claims.Add(new Claim("assigned_product_id", user.AssignedProductId.Value.ToString()));
+        }
+
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_settings.Key));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 

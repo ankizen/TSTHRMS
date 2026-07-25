@@ -17,7 +17,10 @@ public interface IEmployeeService
 
     Task<EmployeeDto?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-    Task<EmployeeDto> CreateAsync(EmployeeWriteRequest request, CancellationToken cancellationToken = default);
+    /// <summary>Null return means an HRBP tried to create outside their assigned legal
+    /// entity/product scope - the only failure mode, since request-shape validation already ran
+    /// before this is called.</summary>
+    Task<EmployeeDto?> CreateAsync(EmployeeWriteRequest request, CancellationToken cancellationToken = default);
 
     Task<EmployeeDto?> UpdateAsync(Guid id, EmployeeWriteRequest request, CancellationToken cancellationToken = default);
 

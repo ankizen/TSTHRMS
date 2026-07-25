@@ -1,4 +1,4 @@
-import { LayoutDashboard, Network, Users } from "lucide-react"
+import { ClipboardCheck, KeyRound, LayoutDashboard, Network, UserCog, Users, UsersRound } from "lucide-react"
 import { NavLink } from "react-router-dom"
 import {
   Sidebar,
@@ -11,14 +11,24 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import { useAuthStore } from "@/stores/auth-store"
 
+/** Undefined `roles` means visible to everyone. This only controls what's shown - the API is
+ * the real gate, so a role without access to a hidden link still can't reach its data. */
 const navItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, end: true },
-  { title: "Employees", url: "/employees", icon: Users, end: false },
-  { title: "Org Chart", url: "/org-chart", icon: Network, end: false },
-]
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, end: true, roles: undefined },
+  { title: "Employees", url: "/employees", icon: Users, end: false, roles: ["HRAdmin", "HRBP"] },
+  { title: "Org Chart", url: "/org-chart", icon: Network, end: false, roles: ["HRAdmin", "HRBP"] },
+  { title: "My Profile", url: "/my/profile", icon: UserCog, end: false, roles: undefined },
+  { title: "My Team", url: "/my/team", icon: UsersRound, end: false, roles: ["Manager"] },
+  { title: "Edit Requests", url: "/admin/edit-requests", icon: ClipboardCheck, end: false, roles: ["HRAdmin", "HRBP"] },
+  { title: "Users", url: "/admin/users", icon: KeyRound, end: false, roles: ["HRAdmin"] },
+] as const
 
 export function AppSidebar() {
+  const roles = useAuthStore((s) => s.user?.roles ?? [])
+  const visibleItems = navItems.filter((item) => !item.roles || item.roles.some((role) => roles.includes(role)))
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="px-2 py-3">
@@ -34,7 +44,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Workspace</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {visibleItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title}>
                     <NavLink to={item.url} end={item.end}>

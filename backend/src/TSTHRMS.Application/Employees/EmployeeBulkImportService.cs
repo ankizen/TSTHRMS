@@ -77,6 +77,12 @@ public class EmployeeBulkImportService(
             }
 
             var created = await employeeService.CreateAsync(row.Request, cancellationToken);
+            if (created is null)
+            {
+                row.Errors.Add("Outside your assigned legal entity/product scope.");
+                continue;
+            }
+
             row.EmployeeCode = created.EmployeeCode;
             createdCount++;
         }

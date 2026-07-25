@@ -7,6 +7,7 @@ using TSTHRMS.Application.Auth;
 using TSTHRMS.Application.Common.Interfaces;
 using TSTHRMS.Application.Documents;
 using TSTHRMS.Application.Employees;
+using TSTHRMS.Application.Users;
 using TSTHRMS.Infrastructure.Auth;
 using TSTHRMS.Infrastructure.Identity;
 using TSTHRMS.Infrastructure.Persistence;
@@ -68,6 +69,9 @@ public static class DependencyInjection
         services.AddScoped<IDocumentRepositoryService, DocumentRepositoryService>();
         services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<IAuditLogService, AuditLogService>();
+        services.AddScoped<IUserManagementService, UserManagementService>();
+        services.AddScoped<IMyProfileService, MyProfileService>();
+        services.AddScoped<IEmployeeEditRequestService, EmployeeEditRequestService>();
 
         return services;
     }

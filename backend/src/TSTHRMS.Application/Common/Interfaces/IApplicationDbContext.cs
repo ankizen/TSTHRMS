@@ -20,6 +20,7 @@ public interface IApplicationDbContext
     DbSet<Nominee> Nominees { get; }
     DbSet<Document> Documents { get; }
     DbSet<EmployeeDocument> EmployeeDocuments { get; }
+    DbSet<EmployeeEditRequest> EmployeeEditRequests { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

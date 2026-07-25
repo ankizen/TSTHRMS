@@ -32,6 +32,7 @@ public class ApplicationDbContext(
     public DbSet<Nominee> Nominees => Set<Nominee>();
     public DbSet<Document> Documents => Set<Document>();
     public DbSet<EmployeeDocument> EmployeeDocuments => Set<EmployeeDocument>();
+    public DbSet<EmployeeEditRequest> EmployeeEditRequests => Set<EmployeeEditRequest>();
     public DbSet<TenantSequence> TenantSequences => Set<TenantSequence>();
 
     protected override void OnModelCreating(ModelBuilder builder)

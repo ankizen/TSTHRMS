@@ -2,9 +2,13 @@ import { useEffect } from "react"
 import { Navigate, Route, Routes } from "react-router-dom"
 import { AppShell } from "@/components/app-shell"
 import { ProtectedRoute } from "@/components/protected-route"
+import { EditRequestsPage } from "@/features/admin/edit-requests/edit-requests-page"
+import { UsersPage } from "@/features/admin/users/users-page"
 import { BulkImportPage } from "@/features/employees/bulk-import/bulk-import-page"
 import { EmployeeFormPage } from "@/features/employees/employee-form-page"
 import { EmployeeListPage } from "@/features/employees/employee-list-page"
+import { MyProfilePage } from "@/features/my/my-profile-page"
+import { MyTeamPage } from "@/features/my/my-team-page"
 import { OrgChartPage } from "@/features/org-chart/org-chart-page"
 import { refreshAccessToken } from "@/lib/api-client"
 import { DashboardPage } from "@/pages/dashboard-page"
@@ -32,6 +36,10 @@ export function App() {
         <Route path="/employees/bulk-import" element={<BulkImportPage />} />
         <Route path="/employees/:id" element={<EmployeeFormPage />} />
         <Route path="/org-chart" element={<OrgChartPage />} />
+        <Route path="/my/profile" element={<MyProfilePage />} />
+        <Route path="/my/team" element={<MyTeamPage />} />
+        <Route path="/admin/users" element={<UsersPage />} />
+        <Route path="/admin/edit-requests" element={<EditRequestsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

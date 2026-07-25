@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Testcontainers.MySql;
+using TSTHRMS.Application.Common;
 using TSTHRMS.Application.Common.Interfaces;
 using TSTHRMS.Application.Employees;
 using TSTHRMS.Application.Employees.Dtos;
@@ -55,8 +56,8 @@ public class EmployeeServiceTests : IAsyncLifetime
         await using var context = CreateContext(_tenantId);
         var service = CreateService(context, _tenantId);
 
-        var first = await service.CreateAsync(BuildRequest());
-        var second = await service.CreateAsync(BuildRequest());
+        var first = await CreateEmployeeAsync(service, BuildRequest());
+        var second = await CreateEmployeeAsync(service, BuildRequest());
 
         Assert.Equal("EMP000001", first.EmployeeCode);
         Assert.Equal("EMP000002", second.EmployeeCode);
@@ -68,7 +69,7 @@ public class EmployeeServiceTests : IAsyncLifetime
         await using var context = CreateContext(_tenantId);
         var service = CreateService(context, _tenantId);
 
-        var created = await service.CreateAsync(BuildRequest());
+        var created = await CreateEmployeeAsync(service, BuildRequest());
 
         var fetched = await service.GetByIdAsync(created.Id);
         Assert.NotNull(fetched);
@@ -91,7 +92,7 @@ public class EmployeeServiceTests : IAsyncLifetime
         await using var context = CreateContext(_tenantId);
         var service = CreateService(context, _tenantId);
 
-        var created = await service.CreateAsync(BuildRequest());
+        var created = await CreateEmployeeAsync(service, BuildRequest());
 
         var updated = await service.UpdateStatusAsync(created.Id, EmployeeStatus.Exited);
 
@@ -106,16 +107,16 @@ public class EmployeeServiceTests : IAsyncLifetime
         await using var context = CreateContext(_tenantId);
         var service = CreateService(context, _tenantId);
 
-        var manager = await service.CreateAsync(BuildRequest() with { FirstName = "Grace", LastName = "Hopper" });
-        var report = await service.CreateAsync(
+        var manager = await CreateEmployeeAsync(service, BuildRequest() with { FirstName = "Grace", LastName = "Hopper" });
+        var report = await CreateEmployeeAsync(service,
             BuildRequest() with { FirstName = "Alan", LastName = "Turing", ReportingManagerId = manager.Id });
-        var exited = await service.CreateAsync(BuildRequest() with { FirstName = "Old", LastName = "Timer" });
+        var exited = await CreateEmployeeAsync(service, BuildRequest() with { FirstName = "Old", LastName = "Timer" });
         await service.UpdateStatusAsync(exited.Id, EmployeeStatus.Exited);
 
         var otherProduct = new TSTHRMS.Domain.Tenancy.Product { TenantId = _tenantId, Name = "Other Product" };
         context.Products.Add(otherProduct);
         await context.SaveChangesAsync();
-        await service.CreateAsync(BuildRequest() with { FirstName = "Off", LastName = "Chart", ProductId = otherProduct.Id });
+        await CreateEmployeeAsync(service, BuildRequest() with { FirstName = "Off", LastName = "Chart", ProductId = otherProduct.Id });
 
         var chart = await service.GetOrgChartAsync(null, _productId);
 
@@ -131,7 +132,7 @@ public class EmployeeServiceTests : IAsyncLifetime
         await using var context = CreateContext(_tenantId);
         var service = CreateService(context, _tenantId);
 
-        var created = await service.CreateAsync(BuildRequest());
+        var created = await CreateEmployeeAsync(service, BuildRequest());
 
         Assert.Equal(new DateOnly(2020, 1, 1).AddMonths(ProbationDefaults.DurationMonths), created.ProbationEndDate);
         Assert.Equal(ConfirmationStatus.Probation, created.ConfirmationStatus);
@@ -143,8 +144,8 @@ public class EmployeeServiceTests : IAsyncLifetime
         await using var context = CreateContext(_tenantId);
         var service = CreateService(context, _tenantId);
 
-        var employee = await service.CreateAsync(BuildRequest());
-        var manager = await service.CreateAsync(BuildRequest() with { FirstName = "Grace", LastName = "Hopper" });
+        var employee = await CreateEmployeeAsync(service, BuildRequest());
+        var manager = await CreateEmployeeAsync(service, BuildRequest() with { FirstName = "Grace", LastName = "Hopper" });
 
         var confirmed = await service.ConfirmAsync(
             employee.Id, new ConfirmEmployeeRequest(manager.Id, new DateOnly(2020, 7, 1)));
@@ -162,7 +163,7 @@ public class EmployeeServiceTests : IAsyncLifetime
         var service = CreateService(context, _tenantId);
 
         var soonToExpire = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(10));
-        var created = await service.CreateAsync(
+        var created = await CreateEmployeeAsync(service,
             BuildRequest() with
             {
                 EmploymentType = EmploymentType.Contract,
@@ -179,7 +180,7 @@ public class EmployeeServiceTests : IAsyncLifetime
         await using var context = CreateContext(_tenantId);
         var service = CreateService(context, _tenantId);
 
-        var match = await service.CreateAsync(BuildRequest() with
+        var match = await CreateEmployeeAsync(service, BuildRequest() with
         {
             FirstName = "Grace",
             LastName = "Hopper",
@@ -187,7 +188,7 @@ public class EmployeeServiceTests : IAsyncLifetime
             Department = "Engineering",
             WorkLocation = "Mumbai HQ",
         });
-        await service.CreateAsync(BuildRequest() with
+        await CreateEmployeeAsync(service, BuildRequest() with
         {
             FirstName = "Alan",
             LastName = "Turing",
@@ -210,6 +211,49 @@ public class EmployeeServiceTests : IAsyncLifetime
         var exported = await service.ExportToExcelAsync(filter);
         Assert.NotEmpty(exported);
     }
+
+    [Fact]
+    public async Task Hrbp_scoped_to_a_legal_entity_cannot_see_or_modify_employees_outside_it()
+    {
+        await using var context = CreateContext(_tenantId);
+        var hrAdminService = CreateService(context, _tenantId);
+
+        var otherLegalEntity = new LegalEntity { TenantId = _tenantId, Name = "Other Entity" };
+        context.LegalEntities.Add(otherLegalEntity);
+        await context.SaveChangesAsync();
+
+        var inScope = await CreateEmployeeAsync(hrAdminService, BuildRequest() with { FirstName = "In", LastName = "Scope" });
+        var outOfScope = await CreateEmployeeAsync(hrAdminService,
+            BuildRequest() with { FirstName = "Out", LastName = "OfScope", LegalEntityId = otherLegalEntity.Id });
+
+        var hrbpCurrentUser = new TestCurrentUserService(roles: [RoleNames.HRBP], assignedLegalEntityId: _legalEntityId);
+        var hrbpService = new EmployeeService(context, new SequenceGenerator(context, new TestTenantContext(_tenantId)), hrbpCurrentUser);
+
+        Assert.NotNull(await hrbpService.GetByIdAsync(inScope.Id));
+        Assert.Null(await hrbpService.GetByIdAsync(outOfScope.Id));
+
+        var list = await hrbpService.GetListAsync(new EmployeeListFilter(1, 50, null, null, null, null, null, null, null));
+        Assert.Contains(list.Items, i => i.Id == inScope.Id);
+        Assert.DoesNotContain(list.Items, i => i.Id == outOfScope.Id);
+
+        var blockedCreate = await hrbpService.CreateAsync(
+            BuildRequest() with { FirstName = "Blocked", LastName = "Create", LegalEntityId = otherLegalEntity.Id });
+        Assert.Null(blockedCreate);
+
+        var blockedUpdate = await hrbpService.UpdateAsync(outOfScope.Id,
+            BuildRequest() with { LegalEntityId = otherLegalEntity.Id, FirstName = "Changed" });
+        Assert.Null(blockedUpdate);
+
+        var allowedUpdate = await hrbpService.UpdateAsync(inScope.Id, BuildRequest() with { FirstName = "Updated" });
+        Assert.NotNull(allowedUpdate);
+        Assert.Equal("Updated", allowedUpdate!.FirstName);
+    }
+
+    /// <summary>Null only means an HRBP tried to create outside their scope - never happens in
+    /// these tests (TestCurrentUserService carries no roles), so this just avoids sprinkling
+    /// null-forgiving operators everywhere a created employee's members are accessed.</summary>
+    private static async Task<EmployeeDto> CreateEmployeeAsync(EmployeeService service, EmployeeWriteRequest request) =>
+        (await service.CreateAsync(request))!;
 
     private EmployeeWriteRequest BuildRequest() => new(
         _legalEntityId,
@@ -257,8 +301,13 @@ public class EmployeeServiceTests : IAsyncLifetime
         public bool IsResolved => tenantId != Guid.Empty;
     }
 
-    private class TestCurrentUserService : ICurrentUserService
+    private class TestCurrentUserService(
+        IReadOnlyCollection<string>? roles = null, Guid? assignedLegalEntityId = null, Guid? assignedProductId = null)
+        : ICurrentUserService
     {
         public Guid? UserId => null;
+        public IReadOnlyCollection<string> Roles => roles ?? [];
+        public Guid? AssignedLegalEntityId => assignedLegalEntityId;
+        public Guid? AssignedProductId => assignedProductId;
     }
 }

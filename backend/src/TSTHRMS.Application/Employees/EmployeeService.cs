@@ -24,7 +24,7 @@ public class EmployeeService(
         var page = filter.Page < 1 ? 1 : filter.Page;
         var pageSize = filter.PageSize is < 1 or > 200 ? 50 : filter.PageSize;
 
-        var query = ApplyFilter(dbContext.Employees.AsNoTracking(), filter);
+        var query = ApplyHrbpScope(ApplyFilter(dbContext.Employees.AsNoTracking(), filter));
 
         var totalCount = await query.CountAsync(cancellationToken);
 
@@ -42,7 +42,7 @@ public class EmployeeService(
 
     public async Task<byte[]> ExportToExcelAsync(EmployeeListFilter filter, CancellationToken cancellationToken = default)
     {
-        var query = ApplyFilter(dbContext.Employees.AsNoTracking(), filter);
+        var query = ApplyHrbpScope(ApplyFilter(dbContext.Employees.AsNoTracking(), filter));
 
         var rows = await query
             .OrderBy(e => e.LastName).ThenBy(e => e.FirstName)
@@ -106,13 +106,55 @@ public class EmployeeService(
         return query;
     }
 
+    /// <summary>An HRBP scoped to a legal entity and/or product only ever sees rows within that
+    /// scope - applied on top of whatever filter the caller explicitly asked for, so a scoped
+    /// HRBP requesting data outside their scope just gets zero rows rather than an error.
+    /// HRAdmin (and any caller without the HRBP role) is unaffected.</summary>
+    private IQueryable<Employee> ApplyHrbpScope(IQueryable<Employee> query)
+    {
+        if (!currentUserService.Roles.Contains(RoleNames.HRBP) || currentUserService.Roles.Contains(RoleNames.HRAdmin))
+        {
+            return query;
+        }
+
+        if (currentUserService.AssignedLegalEntityId is { } scopedEntity)
+        {
+            query = query.Where(e => e.LegalEntityId == scopedEntity);
+        }
+
+        if (currentUserService.AssignedProductId is { } scopedProduct)
+        {
+            query = query.Where(e => e.ProductId == scopedProduct);
+        }
+
+        return query;
+    }
+
+    /// <summary>True when the caller is an HRBP whose assigned legal entity/product scope
+    /// excludes the given combination - used to block reads/writes that ApplyHrbpScope's
+    /// query-level filtering can't reach (e.g. GetById, Create, Update).</summary>
+    private bool IsHrbpOutOfScope(Guid legalEntityId, Guid productId)
+    {
+        if (!currentUserService.Roles.Contains(RoleNames.HRBP) || currentUserService.Roles.Contains(RoleNames.HRAdmin))
+        {
+            return false;
+        }
+
+        if (currentUserService.AssignedLegalEntityId is { } scopedEntity && scopedEntity != legalEntityId)
+        {
+            return true;
+        }
+
+        return currentUserService.AssignedProductId is { } scopedProduct && scopedProduct != productId;
+    }
+
     public async Task<IReadOnlyList<OrgChartNodeDto>> GetOrgChartAsync(
         Guid? legalEntityId, Guid? productId, CancellationToken cancellationToken = default)
     {
         // Exited employees are dropped from the chart; a still-active employee whose manager
         // has exited (or fell outside the entity/product filter) just renders as a root node -
         // simpler than trying to walk past a manager the chart can't show.
-        var query = dbContext.Employees.AsNoTracking().Where(e => e.Status != EmployeeStatus.Exited);
+        var query = ApplyHrbpScope(dbContext.Employees.AsNoTracking().Where(e => e.Status != EmployeeStatus.Exited));
 
         if (legalEntityId is not null)
         {
@@ -141,11 +183,24 @@ public class EmployeeService(
             .AsNoTracking()
             .FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
 
-        return employee is null ? null : await ToDtoAsync(employee, cancellationToken);
+        if (employee is null || IsHrbpOutOfScope(employee.LegalEntityId, employee.ProductId))
+        {
+            return null;
+        }
+
+        return await ToDtoAsync(employee, cancellationToken);
     }
 
-    public async Task<EmployeeDto> CreateAsync(EmployeeWriteRequest request, CancellationToken cancellationToken = default)
+    /// <summary>Null return means the employee wasn't created - either because the request itself
+    /// asked for a legal entity/product outside a scoped HRBP's assignment (the only failure mode
+    /// today, since request-shape validation already ran before this is called).</summary>
+    public async Task<EmployeeDto?> CreateAsync(EmployeeWriteRequest request, CancellationToken cancellationToken = default)
     {
+        if (IsHrbpOutOfScope(request.LegalEntityId, request.ProductId))
+        {
+            return null;
+        }
+
         var nextValue = await sequenceGenerator.NextAsync("EmployeeCode", cancellationToken);
 
         var employee = new Employee
@@ -190,7 +245,7 @@ public class EmployeeService(
     public async Task<EmployeeDto?> UpdateAsync(Guid id, EmployeeWriteRequest request, CancellationToken cancellationToken = default)
     {
         var employee = await dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
-        if (employee is null)
+        if (employee is null || IsHrbpOutOfScope(employee.LegalEntityId, employee.ProductId))
         {
             return null;
         }
@@ -240,7 +295,7 @@ public class EmployeeService(
     public async Task<EmployeeDto?> ConfirmAsync(Guid id, ConfirmEmployeeRequest request, CancellationToken cancellationToken = default)
     {
         var employee = await dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
-        if (employee is null)
+        if (employee is null || IsHrbpOutOfScope(employee.LegalEntityId, employee.ProductId))
         {
             return null;
         }
@@ -257,7 +312,7 @@ public class EmployeeService(
     public async Task<EmployeeDto?> AcknowledgePoshPolicyAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var employee = await dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
-        if (employee is null)
+        if (employee is null || IsHrbpOutOfScope(employee.LegalEntityId, employee.ProductId))
         {
             return null;
         }
@@ -271,7 +326,7 @@ public class EmployeeService(
     public async Task<EmployeeDto?> UpdateStatusAsync(Guid id, EmployeeStatus status, CancellationToken cancellationToken = default)
     {
         var employee = await dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
-        if (employee is null)
+        if (employee is null || IsHrbpOutOfScope(employee.LegalEntityId, employee.ProductId))
         {
             return null;
         }
@@ -285,7 +340,7 @@ public class EmployeeService(
     public async Task<BankAccountRevealDto?> RevealBankAccountNumberAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var employee = await dbContext.Employees.FirstOrDefaultAsync(e => e.Id == id, cancellationToken);
-        if (employee is null)
+        if (employee is null || IsHrbpOutOfScope(employee.LegalEntityId, employee.ProductId))
         {
             return null;
         }
