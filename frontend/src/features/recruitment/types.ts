@@ -388,4 +388,46 @@ export interface UpdateOnboardingItemRequest {
   dueDate: string | null
 }
 
+export interface RecruitmentReportSummary {
+  openRequisitions: number
+  activeApplications: number
+  hiresLast30Days: number
+  averageTimeToHireDays: number | null
+  offersSent: number
+  offersAccepted: number
+  offerAcceptanceRatePercent: number | null
+  offerToJoiningRatePercent: number | null
+}
+
+export interface SourceEffectiveness {
+  source: CandidateSource
+  applications: number
+  hires: number
+  conversionRatePercent: number
+}
+
+export interface RequisitionAgeing {
+  requisitionId: string
+  requisitionCode: string
+  title: string
+  status: RequisitionStatus
+  openings: number
+  ageInDays: number
+  isStale: boolean
+}
+
+export interface TimeToHireByPosting {
+  jobPostingId: string
+  title: string
+  hires: number
+  averageTimeToHireDays: number
+}
+
+export interface RecruitmentReport {
+  summary: RecruitmentReportSummary
+  sourceEffectiveness: SourceEffectiveness[]
+  requisitionAgeing: RequisitionAgeing[]
+  timeToHireByPosting: TimeToHireByPosting[]
+}
+
 export type { Lookup }

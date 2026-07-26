@@ -95,6 +95,7 @@ public static class DependencyInjection
         services.AddScoped<IBackgroundVerificationService, BackgroundVerificationService>();
         services.AddScoped<IPreboardingService, PreboardingService>();
         services.AddScoped<IOnboardingService, OnboardingService>();
+        services.AddScoped<IRecruitmentReportingService, RecruitmentReportingService>();
 
         return services;
     }

@@ -18,6 +18,7 @@ import type {
   OnboardingChecklistItem,
   PreboardingChecklistItem,
   PublishJobPostingRequest,
+  RecruitmentReport,
   RequisitionStatus,
   RescheduleInterviewRequest,
   ScheduleInterviewRequest,
@@ -268,5 +269,10 @@ export async function updateOnboardingItem(
 
 export async function completeOnboardingItem(itemId: string): Promise<OnboardingChecklistItem> {
   const { data } = await apiClient.post<OnboardingChecklistItem>(`/recruitment/onboarding-checklist/${itemId}/complete`)
+  return data
+}
+
+export async function getRecruitmentReport(): Promise<RecruitmentReport> {
+  const { data } = await apiClient.get<RecruitmentReport>("/recruitment/reports")
   return data
 }

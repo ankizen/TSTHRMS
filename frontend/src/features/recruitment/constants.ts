@@ -1,6 +1,7 @@
 import type {
   ApplicationStage,
   BgvStatus,
+  CandidateSource,
   InterviewRecommendation,
   InterviewRound,
   InterviewStatus,
@@ -117,6 +118,16 @@ export const BGV_STATUS_BADGE_VARIANT: Record<BgvStatus, "default" | "secondary"
   InProgress: "secondary",
   Clear: "default",
   DiscrepancyFound: "destructive",
+}
+
+export const CANDIDATE_SOURCE_LABELS: Record<CandidateSource, string> = {
+  CareerSite: "Career Site",
+  Referral: "Referral",
+  LinkedIn: "LinkedIn",
+  Naukri: "Naukri",
+  Indeed: "Indeed",
+  WalkIn: "Walk-in",
+  CampusDrive: "Campus Drive",
 }
 
 export const PREBOARDING_TASK_LABELS: Record<PreboardingTaskType, string> = {

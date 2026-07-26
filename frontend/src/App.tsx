@@ -23,6 +23,7 @@ import { MyInterviewsPage } from "@/features/recruitment/my-interviews-page"
 import { OnboardingChecklistPage } from "@/features/recruitment/onboarding-checklist-page"
 import { MyReferralsPage } from "@/features/recruitment/referrals/my-referrals-page"
 import { ReferCandidatePage } from "@/features/recruitment/referrals/refer-candidate-page"
+import { RecruitmentReportingPage } from "@/features/recruitment/reporting-page"
 import { RequisitionDetailPage } from "@/features/recruitment/requisition-detail-page"
 import { RequisitionsListPage } from "@/features/recruitment/requisitions-list-page"
 import { TalentPoolPage } from "@/features/recruitment/talent-pool-page"
@@ -67,6 +68,7 @@ export function App() {
         <Route path="/recruitment/refer" element={<ReferCandidatePage />} />
         <Route path="/recruitment/my-referrals" element={<MyReferralsPage />} />
         <Route path="/recruitment/employees/:employeeId/onboarding" element={<OnboardingChecklistPage />} />
+        <Route path="/recruitment/reports" element={<RecruitmentReportingPage />} />
         <Route path="/my/profile" element={<MyProfilePage />} />
         <Route path="/my/team" element={<MyTeamPage />} />
         <Route path="/my/interviews" element={<MyInterviewsPage />} />

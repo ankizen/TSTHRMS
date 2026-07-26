@@ -429,3 +429,42 @@ public record OnboardingChecklistItemDto(
     bool IsOverdue);
 
 public record UpdateOnboardingItemRequest(Guid? OwnerUserId, DateOnly? DueDate);
+
+// ---- Recruitment Reporting & Analytics (Section 12) ----
+
+public record RecruitmentReportSummaryDto(
+    int OpenRequisitions,
+    int ActiveApplications,
+    int HiresLast30Days,
+    double? AverageTimeToHireDays,
+    int OffersSent,
+    int OffersAccepted,
+    double? OfferAcceptanceRatePercent,
+    double? OfferToJoiningRatePercent);
+
+public record SourceEffectivenessDto(
+    CandidateSource Source,
+    int Applications,
+    int Hires,
+    double ConversionRatePercent);
+
+public record RequisitionAgeingDto(
+    Guid RequisitionId,
+    string RequisitionCode,
+    string Title,
+    RequisitionStatus Status,
+    int Openings,
+    int AgeInDays,
+    bool IsStale);
+
+public record TimeToHireByPostingDto(
+    Guid JobPostingId,
+    string Title,
+    int Hires,
+    double AverageTimeToHireDays);
+
+public record RecruitmentReportDto(
+    RecruitmentReportSummaryDto Summary,
+    IReadOnlyList<SourceEffectivenessDto> SourceEffectiveness,
+    IReadOnlyList<RequisitionAgeingDto> RequisitionAgeing,
+    IReadOnlyList<TimeToHireByPostingDto> TimeToHireByPosting);

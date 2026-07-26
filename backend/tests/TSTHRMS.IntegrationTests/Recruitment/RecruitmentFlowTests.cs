@@ -754,6 +754,126 @@ public class RecruitmentFlowTests : IAsyncLifetime
         Assert.NotNull(employeeAfterAcknowledgement.PoshAcknowledgedAt);
     }
 
+    [Fact]
+    public async Task Recruitment_report_aggregates_correctly_and_scopes_by_requisition_ownership()
+    {
+        await using var context = CreateContext(_tenantId);
+        var now = DateTimeOffset.UtcNow;
+
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+
+        // Requisition A (raised by _managerUserId) - backdated 45 days so it shows as ageing/stale.
+        var managerAService = CreateRequisitionService(context, _managerUserId, []);
+        var postingA = await PublishRequisitionAsync(managerAService, hrService, "Report Test Role A");
+
+        // Requisition B (raised by _otherManagerUserId) - backdated 10 days, not stale.
+        var managerBService = CreateRequisitionService(context, _otherManagerUserId, []);
+        var postingB = await PublishRequisitionAsync(managerBService, hrService, "Report Test Role B");
+
+        var requisitionA = await context.JobRequisitions.SingleAsync(r => r.JobPosting!.Id == postingA.Id);
+        requisitionA.CreatedAt = now.AddDays(-45);
+        var requisitionB = await context.JobRequisitions.SingleAsync(r => r.JobPosting!.Id == postingB.Id);
+        requisitionB.CreatedAt = now.AddDays(-10);
+        await context.SaveChangesAsync();
+
+        // A1: CareerSite, under posting A, applied 20 days ago, hired 5 days ago (15-day time-to-hire), offer Accepted.
+        var candidate1 = new Candidate
+        {
+            FirstName = "A1", LastName = "Candidate", Email = "a1@example.com", Phone = "9000000001",
+            Source = CandidateSource.CareerSite, ConsentGivenAt = now,
+        };
+        // A2: Referral, under posting A, applied 10 days ago, still Screening (active, not hired).
+        var candidate2 = new Candidate
+        {
+            FirstName = "A2", LastName = "Candidate", Email = "a2@example.com", Phone = "9000000002",
+            Source = CandidateSource.Referral, ConsentGivenAt = now,
+        };
+        // A3: CareerSite, under posting B, applied 40 days ago, Rejected, offer Declined.
+        var candidate3 = new Candidate
+        {
+            FirstName = "A3", LastName = "Candidate", Email = "a3@example.com", Phone = "9000000003",
+            Source = CandidateSource.CareerSite, ConsentGivenAt = now,
+        };
+        context.Candidates.AddRange(candidate1, candidate2, candidate3);
+        await context.SaveChangesAsync();
+
+        var application1 = new JobApplication
+        {
+            CandidateId = candidate1.Id, JobPostingId = postingA.Id, Stage = ApplicationStage.Hired,
+            StageChangedAt = now.AddDays(-5), AppliedAt = now.AddDays(-20),
+        };
+        var application2 = new JobApplication
+        {
+            CandidateId = candidate2.Id, JobPostingId = postingA.Id, Stage = ApplicationStage.Screening,
+            StageChangedAt = now.AddDays(-10), AppliedAt = now.AddDays(-10),
+        };
+        var application3 = new JobApplication
+        {
+            CandidateId = candidate3.Id, JobPostingId = postingB.Id, Stage = ApplicationStage.Rejected,
+            StageChangedAt = now.AddDays(-40), AppliedAt = now.AddDays(-40),
+        };
+        context.Applications.AddRange(application1, application2, application3);
+        await context.SaveChangesAsync();
+
+        context.ApplicationStageHistories.Add(new ApplicationStageHistory
+        {
+            ApplicationId = application1.Id, FromStage = ApplicationStage.OfferAccepted, ToStage = ApplicationStage.Hired,
+            ChangedByUserId = Guid.NewGuid(), ChangedAt = now.AddDays(-5),
+        });
+        context.Offers.AddRange(
+            new Offer { ApplicationId = application1.Id, Token = "token-a1", Status = OfferStatus.Accepted },
+            new Offer { ApplicationId = application2.Id, Token = "token-a2", Status = OfferStatus.Draft },
+            new Offer { ApplicationId = application3.Id, Token = "token-a3", Status = OfferStatus.Declined });
+        await context.SaveChangesAsync();
+
+        // ---- HRAdmin sees everything across both requisitions ----
+        var hrReportingService = CreateReportingService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var hrReport = await hrReportingService.GetReportAsync();
+
+        Assert.Equal(2, hrReport.Summary.OpenRequisitions);
+        Assert.Equal(1, hrReport.Summary.ActiveApplications);
+        Assert.Equal(1, hrReport.Summary.HiresLast30Days);
+        Assert.Equal(15.0, hrReport.Summary.AverageTimeToHireDays);
+        Assert.Equal(2, hrReport.Summary.OffersSent); // Draft offer excluded
+        Assert.Equal(1, hrReport.Summary.OffersAccepted);
+        Assert.Equal(50.0, hrReport.Summary.OfferAcceptanceRatePercent);
+        Assert.Equal(50.0, hrReport.Summary.OfferToJoiningRatePercent);
+
+        var careerSite = hrReport.SourceEffectiveness.Single(s => s.Source == CandidateSource.CareerSite);
+        Assert.Equal(2, careerSite.Applications);
+        Assert.Equal(1, careerSite.Hires);
+        Assert.Equal(50.0, careerSite.ConversionRatePercent);
+        var referral = hrReport.SourceEffectiveness.Single(s => s.Source == CandidateSource.Referral);
+        Assert.Equal(1, referral.Applications);
+        Assert.Equal(0, referral.Hires);
+
+        Assert.Equal(2, hrReport.RequisitionAgeing.Count);
+        Assert.Equal(requisitionA.Id, hrReport.RequisitionAgeing[0].RequisitionId); // oldest first
+        Assert.True(hrReport.RequisitionAgeing[0].IsStale);
+        Assert.False(hrReport.RequisitionAgeing[1].IsStale);
+
+        var timeToHire = Assert.Single(hrReport.TimeToHireByPosting);
+        Assert.Equal(postingA.Id, timeToHire.JobPostingId);
+        Assert.Equal(1, timeToHire.Hires);
+        Assert.Equal(15.0, timeToHire.AverageTimeToHireDays);
+
+        // ---- Manager A (raised requisition A only) sees only their own slice ----
+        var managerAReportingService = CreateReportingService(context, _managerUserId, []);
+        var managerAReport = await managerAReportingService.GetReportAsync();
+
+        Assert.Equal(1, managerAReport.Summary.OpenRequisitions);
+        Assert.Equal(1, managerAReport.Summary.ActiveApplications); // application2 only
+        Assert.Equal(1, managerAReport.Summary.OffersSent); // application3's offer is out of scope
+        Assert.Equal(100.0, managerAReport.Summary.OfferAcceptanceRatePercent);
+        Assert.Equal(100.0, managerAReport.Summary.OfferToJoiningRatePercent);
+        Assert.Single(managerAReport.RequisitionAgeing);
+        Assert.Equal(requisitionA.Id, managerAReport.RequisitionAgeing[0].RequisitionId);
+    }
+
+    private RecruitmentReportingService CreateReportingService(
+        ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles) =>
+        new(context, new TestCurrentUserService(userId, roles));
+
     private OnboardingService CreateOnboardingService(
         ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles,
         Guid? employeeId = null, IUserDirectory? userDirectory = null)
