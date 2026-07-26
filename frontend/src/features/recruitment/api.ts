@@ -2,7 +2,9 @@ import { apiClient } from "@/lib/api-client"
 import type {
   ApplicantListItem,
   AssessmentDetail,
+  Bgv,
   CreateOrReviseOfferRequest,
+  InitiateBgvRequest,
   Interview,
   InterviewerCandidate,
   InterviewScorecard,
@@ -12,6 +14,7 @@ import type {
   MoveApplicationStageRequest,
   MyInterview,
   Offer,
+  PreboardingChecklistItem,
   PublishJobPostingRequest,
   RequisitionStatus,
   RescheduleInterviewRequest,
@@ -23,6 +26,7 @@ import type {
   TalentPoolCandidate,
   TestConfiguration,
   TestConfigurationRequest,
+  UpdateBgvStatusRequest,
   UpdateInterviewStatusRequest,
 } from "./types"
 
@@ -206,5 +210,34 @@ export async function approveOffer(offerId: string, comment: string | null): Pro
 
 export async function sendOffer(offerId: string, request: SendOfferRequest): Promise<Offer> {
   const { data } = await apiClient.post<Offer>(`/recruitment/offers/${offerId}/send`, request)
+  return data
+}
+
+export async function getBgv(applicationId: string): Promise<Bgv> {
+  const { data } = await apiClient.get<Bgv>(`/recruitment/applications/${applicationId}/bgv`)
+  return data
+}
+
+export async function initiateBgv(applicationId: string, request: InitiateBgvRequest): Promise<Bgv> {
+  const { data } = await apiClient.post<Bgv>(`/recruitment/applications/${applicationId}/bgv/initiate`, request)
+  return data
+}
+
+export async function updateBgvStatus(applicationId: string, request: UpdateBgvStatusRequest): Promise<Bgv> {
+  const { data } = await apiClient.post<Bgv>(`/recruitment/applications/${applicationId}/bgv/status`, request)
+  return data
+}
+
+export async function getPreboardingChecklist(applicationId: string): Promise<PreboardingChecklistItem[]> {
+  const { data } = await apiClient.get<PreboardingChecklistItem[]>(
+    `/recruitment/applications/${applicationId}/preboarding`,
+  )
+  return data
+}
+
+export async function completeItAssetTask(applicationId: string): Promise<PreboardingChecklistItem> {
+  const { data } = await apiClient.post<PreboardingChecklistItem>(
+    `/recruitment/applications/${applicationId}/preboarding/it-asset-request/complete`,
+  )
   return data
 }

@@ -325,4 +325,42 @@ export interface SendOfferRequest {
   responseWindowDays: number
 }
 
+export type BgvStatus = "NotStarted" | "Initiated" | "InProgress" | "Clear" | "DiscrepancyFound"
+
+export interface Bgv {
+  applicationId: string
+  status: BgvStatus
+  vendorReference: string | null
+  isConditionalJoining: boolean
+  initiatedAt: string | null
+  clearedAt: string | null
+  discrepancyNotes: string | null
+}
+
+export interface InitiateBgvRequest {
+  vendorReference: string | null
+  isConditionalJoining: boolean
+}
+
+export interface UpdateBgvStatusRequest {
+  status: BgvStatus
+  notes: string | null
+}
+
+export type PreboardingTaskType =
+  | "EducationCertificate" | "IdentityProof" | "PreviousEmploymentRelievingLetter"
+  | "BankDetails" | "ItAssetRequest" | "WelcomeCommunication"
+
+export type PreboardingTaskStatus = "Pending" | "Completed"
+
+export interface PreboardingChecklistItem {
+  id: string
+  taskType: PreboardingTaskType
+  status: PreboardingTaskStatus
+  completedAt: string | null
+  documentId: string | null
+  bankAccountNumberMasked: string | null
+  bankIfscCode: string | null
+}
+
 export type { Lookup }

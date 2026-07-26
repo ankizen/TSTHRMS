@@ -4,6 +4,8 @@ import type {
   ApplyResult,
   CandidateLoginResult,
   MyApplication,
+  MyPreboardingTask,
+  PreboardingTaskType,
   PublicApplicationRequest,
   PublicAssessment,
   PublicCompany,
@@ -11,6 +13,7 @@ import type {
   PublicJobFilter,
   PublicJobListItem,
   PublicOffer,
+  SubmitBankDetailsRequest,
 } from "./types"
 
 export async function getCompany(tenantSlug: string): Promise<PublicCompany> {
@@ -90,4 +93,28 @@ export async function verifyCandidateOtp(
 export async function getMyApplications(): Promise<MyApplication[]> {
   const { data } = await candidateApiClient.get<MyApplication[]>("/candidate-portal/applications")
   return data
+}
+
+export async function getMyPreboardingChecklist(applicationId: string): Promise<MyPreboardingTask[]> {
+  const { data } = await candidateApiClient.get<MyPreboardingTask[]>(
+    `/candidate-portal/applications/${applicationId}/preboarding`,
+  )
+  return data
+}
+
+export async function submitPreboardingDocument(
+  applicationId: string, taskType: PreboardingTaskType, file: File,
+): Promise<void> {
+  const formData = new FormData()
+  formData.append("file", file)
+  await candidateApiClient.post(
+    `/candidate-portal/applications/${applicationId}/preboarding/${taskType}/document`, formData,
+    { headers: { "Content-Type": "multipart/form-data" } },
+  )
+}
+
+export async function submitPreboardingBankDetails(
+  applicationId: string, request: SubmitBankDetailsRequest,
+): Promise<void> {
+  await candidateApiClient.post(`/candidate-portal/applications/${applicationId}/preboarding/bank-details`, request)
 }

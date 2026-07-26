@@ -1,4 +1,5 @@
 import type {
+  PreboardingTaskType,
   PublicApplicationStage,
   PublicAssessmentType,
   PublicEmploymentType,
@@ -49,4 +50,13 @@ export const OFFER_STATUS_LABELS: Record<PublicOfferStatus, string> = {
   Accepted: "Accepted",
   Declined: "Declined",
   Expired: "Expired",
+}
+
+export const PREBOARDING_TASK_LABELS: Record<PreboardingTaskType, string> = {
+  EducationCertificate: "Education Certificate",
+  IdentityProof: "Identity Proof",
+  PreviousEmploymentRelievingLetter: "Previous Employment Relieving Letter",
+  BankDetails: "Bank Details",
+  ItAssetRequest: "IT Setup",
+  WelcomeCommunication: "Welcome Email",
 }

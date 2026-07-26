@@ -375,3 +375,36 @@ public record ReferralSubmissionRequest(string FirstName, string LastName, strin
 /// <summary>Stage only - Section 4: "referral status visible to the referring employee (without
 /// exposing full interview feedback)".</summary>
 public record MyReferralDto(Guid CandidateId, string CandidateName, string JobPostingTitle, ApplicationStage Stage, DateTimeOffset AppliedAt);
+
+// ---- Background Verification (Section 9) ----
+
+public record BgvDto(
+    Guid ApplicationId,
+    BgvStatus Status,
+    string? VendorReference,
+    bool IsConditionalJoining,
+    DateTimeOffset? InitiatedAt,
+    DateTimeOffset? ClearedAt,
+    string? DiscrepancyNotes);
+
+public record InitiateBgvRequest(string? VendorReference, bool IsConditionalJoining);
+
+public record UpdateBgvStatusRequest(BgvStatus Status, string? Notes);
+
+// ---- Pre-boarding (Section 10) ----
+
+public record PreboardingChecklistItemDto(
+    Guid Id,
+    PreboardingTaskType TaskType,
+    PreboardingTaskStatus Status,
+    DateTimeOffset? CompletedAt,
+    Guid? DocumentId,
+    string? BankAccountNumberMasked,
+    string? BankIfscCode);
+
+public record SubmitBankDetailsRequest(string BankAccountNumber, string BankIfscCode);
+
+/// <summary>The candidate's own pre-boarding view - same task shape as the internal one, minus
+/// anything HR-internal (there's nothing hidden here, but kept as its own DTO so the two can
+/// diverge later without a breaking change).</summary>
+public record MyPreboardingTaskDto(PreboardingTaskType TaskType, PreboardingTaskStatus Status, DateTimeOffset? CompletedAt);

@@ -123,3 +123,20 @@ export interface MyApplication {
   assessment: MyApplicationAssessment | null
   offer: MyApplicationOffer | null
 }
+
+export type PreboardingTaskType =
+  | "EducationCertificate" | "IdentityProof" | "PreviousEmploymentRelievingLetter"
+  | "BankDetails" | "ItAssetRequest" | "WelcomeCommunication"
+
+export type PreboardingTaskStatus = "Pending" | "Completed"
+
+export interface MyPreboardingTask {
+  taskType: PreboardingTaskType
+  status: PreboardingTaskStatus
+  completedAt: string | null
+}
+
+export interface SubmitBankDetailsRequest {
+  bankAccountNumber: string
+  bankIfscCode: string
+}

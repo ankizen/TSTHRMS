@@ -1,9 +1,11 @@
 import type {
   ApplicationStage,
+  BgvStatus,
   InterviewRecommendation,
   InterviewRound,
   InterviewStatus,
   OfferStatus,
+  PreboardingTaskType,
   RequisitionReason,
   RequisitionStatus,
 } from "./types"
@@ -99,4 +101,29 @@ export const OFFER_STATUS_BADGE_VARIANT: Record<OfferStatus, "default" | "second
   Accepted: "default",
   Declined: "destructive",
   Expired: "destructive",
+}
+
+export const BGV_STATUS_LABELS: Record<BgvStatus, string> = {
+  NotStarted: "Not Started",
+  Initiated: "Initiated",
+  InProgress: "In Progress",
+  Clear: "Clear",
+  DiscrepancyFound: "Discrepancy Found",
+}
+
+export const BGV_STATUS_BADGE_VARIANT: Record<BgvStatus, "default" | "secondary" | "outline" | "destructive"> = {
+  NotStarted: "outline",
+  Initiated: "secondary",
+  InProgress: "secondary",
+  Clear: "default",
+  DiscrepancyFound: "destructive",
+}
+
+export const PREBOARDING_TASK_LABELS: Record<PreboardingTaskType, string> = {
+  EducationCertificate: "Education Certificate",
+  IdentityProof: "Identity Proof",
+  PreviousEmploymentRelievingLetter: "Previous Employment Relieving Letter",
+  BankDetails: "Bank Details",
+  ItAssetRequest: "IT Asset Request",
+  WelcomeCommunication: "Welcome Communication",
 }

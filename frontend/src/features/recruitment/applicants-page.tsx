@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { AlertCircle, ArrowLeft, Banknote, CalendarClock, FileCheck2, Star, UsersRound } from "lucide-react"
+import { AlertCircle, ArrowLeft, Banknote, CalendarClock, ClipboardCheck, FileCheck2, ShieldCheck, Star, UsersRound } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useNavigate, useParams } from "react-router-dom"
@@ -19,10 +19,12 @@ import {
   getApplicants, getAssessmentDetail, getTestConfiguration, moveApplicationStage,
   scoreAssessment, sendAssessment, setTalentPool,
 } from "./api"
+import { BgvSheet } from "./bgv-sheet"
 import { APPLICATION_STAGE_LABELS, APPLICATION_STAGE_OPTIONS } from "./constants"
 import { InterviewsSheet } from "./interviews-sheet"
 import { MoveStageDialog } from "./move-stage-dialog"
 import { OfferSheet } from "./offer-sheet"
+import { PreboardingSheet } from "./preboarding-sheet"
 import { ScoreAssessmentDialog } from "./score-assessment-dialog"
 import type { ApplicantListItem, ApplicationStage, AssessmentSummary } from "./types"
 
@@ -37,6 +39,8 @@ export function ApplicantsPage() {
   const [pendingMove, setPendingMove] = useState<{ applicationId: string; stage: ApplicationStage } | null>(null)
   const [interviewsFor, setInterviewsFor] = useState<{ applicationId: string; candidateName: string } | null>(null)
   const [offerFor, setOfferFor] = useState<{ applicationId: string; candidateName: string } | null>(null)
+  const [bgvFor, setBgvFor] = useState<{ applicationId: string; candidateName: string } | null>(null)
+  const [preboardingFor, setPreboardingFor] = useState<{ applicationId: string; candidateName: string } | null>(null)
   const [scoringAssessment, setScoringAssessment] = useState<AssessmentSummary | null>(null)
 
   const { data: applicants, isLoading } = useQuery({
@@ -175,6 +179,18 @@ export function ApplicantsPage() {
                         candidateName: `${applicant.firstName} ${applicant.lastName}`,
                       })
                     }
+                    onOpenBgv={() =>
+                      setBgvFor({
+                        applicationId: applicant.applicationId,
+                        candidateName: `${applicant.firstName} ${applicant.lastName}`,
+                      })
+                    }
+                    onOpenPreboarding={() =>
+                      setPreboardingFor({
+                        applicationId: applicant.applicationId,
+                        candidateName: `${applicant.firstName} ${applicant.lastName}`,
+                      })
+                    }
                   />
                 ))}
               </div>
@@ -203,6 +219,18 @@ export function ApplicantsPage() {
         onOpenChange={(open) => !open && setOfferFor(null)}
       />
 
+      <BgvSheet
+        applicationId={bgvFor?.applicationId ?? null}
+        candidateName={bgvFor?.candidateName ?? null}
+        onOpenChange={(open) => !open && setBgvFor(null)}
+      />
+
+      <PreboardingSheet
+        applicationId={preboardingFor?.applicationId ?? null}
+        candidateName={preboardingFor?.candidateName ?? null}
+        onOpenChange={(open) => !open && setPreboardingFor(null)}
+      />
+
       <ScoreAssessmentDialog
         assessment={scoringAssessment}
         onOpenChange={(open) => !open && setScoringAssessment(null)}
@@ -218,7 +246,7 @@ export function ApplicantsPage() {
 
 function ApplicantCard({
   applicant, isAssessmentEnabled, onStageChange, onToggleTalentPool, onOpenInterviews, onSendAssessment,
-  onScoreAssessment, onOpenOffer,
+  onScoreAssessment, onOpenOffer, onOpenBgv, onOpenPreboarding,
 }: {
   applicant: ApplicantListItem
   isAssessmentEnabled: boolean
@@ -228,6 +256,8 @@ function ApplicantCard({
   onSendAssessment: () => void
   onScoreAssessment: () => void
   onOpenOffer: () => void
+  onOpenBgv: () => void
+  onOpenPreboarding: () => void
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-xl border bg-card p-3 shadow-sm">
@@ -319,14 +349,22 @@ function ApplicantCard({
         </SelectContent>
       </Select>
 
-      <div className="flex gap-2">
-        <Button type="button" variant="outline" size="sm" className="h-8 flex-1 text-xs" onClick={onOpenInterviews}>
+      <div className="grid grid-cols-2 gap-2">
+        <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onOpenInterviews}>
           <CalendarClock className="size-3.5" />
           Interviews
         </Button>
-        <Button type="button" variant="outline" size="sm" className="h-8 flex-1 text-xs" onClick={onOpenOffer}>
+        <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onOpenOffer}>
           <Banknote className="size-3.5" />
           Offer
+        </Button>
+        <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onOpenBgv}>
+          <ShieldCheck className="size-3.5" />
+          BGV
+        </Button>
+        <Button type="button" variant="outline" size="sm" className="h-8 text-xs" onClick={onOpenPreboarding}>
+          <ClipboardCheck className="size-3.5" />
+          Pre-boarding
         </Button>
       </div>
     </div>

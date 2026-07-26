@@ -11,8 +11,9 @@ namespace TSTHRMS.Application.Recruitment;
 
 /// <summary>
 /// Section 8: offer creation, internal approval, sending, and the candidate's accept/decline -
-/// delivered via the same anonymous tokenized-link pattern as Slice 4's assessments, since
-/// Candidate Portal login (Slice 6) doesn't exist yet.
+/// delivered via the same anonymous tokenized-link pattern as Slice 4's assessments (the offer
+/// itself is answered before the candidate necessarily has a Candidate Portal session; Section
+/// 10's pre-boarding checklist that kicks off on acceptance is where the portal login matters).
 /// </summary>
 public class OfferService(
     IApplicationDbContext dbContext,
@@ -20,6 +21,7 @@ public class OfferService(
     ICurrentUserService currentUserService,
     IFrontendLinkBuilder frontendLinkBuilder,
     IEmailSender emailSender,
+    IPreboardingService preboardingService,
     ILogger<OfferService> logger) : IOfferService
 {
     public async Task<OfferDto?> CreateAsync(
@@ -222,6 +224,14 @@ public class OfferService(
         });
 
         await dbContext.SaveChangesAsync(cancellationToken);
+
+        if (request.Accepted)
+        {
+            // Section 10: "auto-trigger a pre-boarding checklist the moment an offer is
+            // accepted" - right here, not as a separate step HR has to remember to do.
+            await preboardingService.CreateChecklistAsync(application.Id, cancellationToken);
+        }
+
         return true;
     }
 

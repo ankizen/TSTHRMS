@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { getMyApplications } from "./api"
 import { useCandidateAuthStore } from "./candidate-auth-store"
 import { APPLICATION_STAGE_LABELS, ASSESSMENT_TYPE_LABELS, INTERVIEW_STATUS_LABELS, OFFER_STATUS_LABELS } from "./constants"
+import { PreboardingTasks } from "./preboarding-tasks"
 
 export function CandidatePortalPage() {
   const { tenantSlug = "" } = useParams()
@@ -117,6 +118,10 @@ export function CandidatePortalPage() {
                     </a>
                   )}
                 </div>
+              )}
+
+              {(application.stage === "OfferAccepted" || application.stage === "Hired") && (
+                <PreboardingTasks applicationId={application.applicationId} />
               )}
             </div>
           ))}

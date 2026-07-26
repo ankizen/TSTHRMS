@@ -557,13 +557,132 @@ public class RecruitmentFlowTests : IAsyncLifetime
         Assert.False(blockedResult.Succeeded);
     }
 
+    [Fact]
+    public async Task Accepting_an_offer_auto_creates_a_preboarding_checklist_and_candidate_can_submit_tasks()
+    {
+        await using var context = CreateContext(_tenantId);
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+
+        var posting = await PublishRequisitionAsync(managerService, hrService, "DevOps Engineer");
+
+        using var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray());
+        var applyResult = await careerSiteService.ApplyAsync(
+            posting.Slug, new PublicApplicationRequest("Margaret", "Hamilton", "margaret@example.com", "9999999989", null, null, null, true),
+            CandidateSource.CareerSite, null, resume, "resume.pdf", "application/pdf", resume.Length);
+        var applicationId = applyResult.ApplicationId!.Value;
+
+        var welcomeEmailSender = new CapturingEmailSender();
+        var hrOfferService = CreateOfferService(context, Guid.NewGuid(), [RoleNames.HRAdmin], welcomeEmailSender);
+
+        var offer = await hrOfferService.CreateAsync(
+            applicationId, new CreateOrReviseOfferRequest("DevOps Engineer", new DateOnly(2026, 9, 1), 1800000m, null, null, null, null, null));
+        await hrOfferService.SubmitForApprovalAsync(offer!.Id);
+        await hrOfferService.ApproveAsync(offer.Id, new OfferDecisionRequest(null));
+        await hrOfferService.SendAsync(offer.Id, new SendOfferRequest(7));
+
+        var token = await context.Offers.Where(o => o.ApplicationId == applicationId).Select(o => o.Token).SingleAsync();
+        await hrOfferService.RespondPublicOfferAsync(token, new PublicOfferDecisionRequest(true, null));
+
+        // The welcome email fired automatically as part of checklist creation.
+        Assert.NotNull(welcomeEmailSender.LastHtmlBody);
+
+        var hrPreboardingService = CreatePreboardingService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var hrChecklist = await hrPreboardingService.GetChecklistAsync(applicationId);
+        Assert.Equal(6, hrChecklist!.Count);
+        var welcomeTask = hrChecklist.Single(t => t.TaskType == PreboardingTaskType.WelcomeCommunication);
+        Assert.Equal(PreboardingTaskStatus.Completed, welcomeTask.Status);
+
+        var candidateId = await context.Candidates.AsNoTracking()
+            .Where(c => c.Email == "margaret@example.com").Select(c => c.Id).SingleAsync();
+        var candidatePreboardingService = CreatePreboardingService(context, Guid.NewGuid(), [], candidateId);
+
+        using (var certificate = new MemoryStream("%PDF-1.4 cert"u8.ToArray()))
+        {
+            var submitted = await candidatePreboardingService.SubmitDocumentTaskAsync(
+                applicationId, PreboardingTaskType.EducationCertificate, certificate, "degree.pdf", "application/pdf", certificate.Length);
+            Assert.True(submitted);
+        }
+
+        var bankDetailsSubmitted = await candidatePreboardingService.SubmitBankDetailsAsync(
+            applicationId, new SubmitBankDetailsRequest("1234567890123456", "HDFC0001234"));
+        Assert.True(bankDetailsSubmitted);
+
+        var updatedChecklist = await hrPreboardingService.GetChecklistAsync(applicationId);
+        var educationTask = updatedChecklist!.Single(t => t.TaskType == PreboardingTaskType.EducationCertificate);
+        Assert.Equal(PreboardingTaskStatus.Completed, educationTask.Status);
+        Assert.NotNull(educationTask.DocumentId);
+
+        var bankTask = updatedChecklist!.Single(t => t.TaskType == PreboardingTaskType.BankDetails);
+        Assert.EndsWith("3456", bankTask.BankAccountNumberMasked);
+        Assert.DoesNotContain("1234567890", bankTask.BankAccountNumberMasked ?? "");
+
+        // A different candidate can't touch this application's checklist.
+        var otherCandidateService = CreatePreboardingService(context, Guid.NewGuid(), [], Guid.NewGuid());
+        var blockedBankSubmit = await otherCandidateService.SubmitBankDetailsAsync(
+            applicationId, new SubmitBankDetailsRequest("999", "ICIC0009999"));
+        Assert.False(blockedBankSubmit);
+    }
+
+    [Fact]
+    public async Task Bgv_can_be_initiated_and_its_status_updated_within_the_same_ownership_scoping()
+    {
+        await using var context = CreateContext(_tenantId);
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Finance Analyst");
+
+        using var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray());
+        var applyResult = await careerSiteService.ApplyAsync(
+            posting.Slug, new PublicApplicationRequest("Rear", "Admiral", "rear.admiral@example.com", "9999999988", null, null, null, true),
+            CandidateSource.CareerSite, null, resume, "resume.pdf", "application/pdf", resume.Length);
+        var applicationId = applyResult.ApplicationId!.Value;
+
+        var hrBgvService = CreateBgvService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+
+        var notStarted = await hrBgvService.GetForApplicationAsync(applicationId);
+        Assert.Equal(BgvStatus.NotStarted, notStarted!.Status);
+
+        var initiated = await hrBgvService.InitiateAsync(
+            applicationId, new InitiateBgvRequest("AUTHBRIDGE-12345", true));
+        Assert.Equal(BgvStatus.Initiated, initiated!.Status);
+        Assert.True(initiated.IsConditionalJoining);
+
+        var flagged = await hrBgvService.UpdateStatusAsync(
+            applicationId, new UpdateBgvStatusRequest(BgvStatus.DiscrepancyFound, "Mismatched employment dates"));
+        Assert.Equal(BgvStatus.DiscrepancyFound, flagged!.Status);
+        Assert.Equal("Mismatched employment dates", flagged.DiscrepancyNotes);
+
+        // An unrelated Manager can't see or touch this application's BGV record.
+        var otherManagerBgvService = CreateBgvService(context, _otherManagerUserId, []);
+        Assert.Null(await otherManagerBgvService.GetForApplicationAsync(applicationId));
+        Assert.Null(await otherManagerBgvService.UpdateStatusAsync(
+            applicationId, new UpdateBgvStatusRequest(BgvStatus.Clear, null)));
+    }
+
     private CandidatePortalAuthService CreateCandidatePortalAuthService(ApplicationDbContext context, IEmailSender emailSender) =>
         new(context, new TestTenantContext(_tenantId), emailSender, new JwtTokenGenerator(new TestJwtOptions()),
             NullLogger<CandidatePortalAuthService>.Instance);
 
-    private OfferService CreateOfferService(ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles) =>
+    private OfferService CreateOfferService(
+        ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles, IEmailSender? preboardingEmailSender = null) =>
         new(context, new TestTenantContext(_tenantId), new TestCurrentUserService(userId, roles),
-            new NoOpFrontendLinkBuilder(), new NoOpEmailSender(), NullLogger<OfferService>.Instance);
+            new NoOpFrontendLinkBuilder(), new NoOpEmailSender(),
+            CreatePreboardingService(context, userId, roles, emailSender: preboardingEmailSender),
+            NullLogger<OfferService>.Instance);
+
+    private PreboardingService CreatePreboardingService(
+        ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles,
+        Guid? candidateId = null, IEmailSender? emailSender = null) =>
+        new(context, new TestTenantContext(_tenantId), new TestCurrentUserService(userId, roles),
+            new TestCandidateContext(candidateId), new LocalFileStorageService(new TestFileStorageOptions(_storageRoot)),
+            emailSender ?? new NoOpEmailSender(), NullLogger<PreboardingService>.Instance);
+
+    private BackgroundVerificationService CreateBgvService(ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles) =>
+        new(context, new TestCurrentUserService(userId, roles));
 
     private AssessmentService CreateAssessmentService(ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles) =>
         new(context, new TestTenantContext(_tenantId), new TestCurrentUserService(userId, roles),

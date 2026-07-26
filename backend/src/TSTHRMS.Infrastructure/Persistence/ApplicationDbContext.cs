@@ -53,6 +53,8 @@ public class ApplicationDbContext(
     public DbSet<Offer> Offers => Set<Offer>();
     public DbSet<OfferVersion> OfferVersions => Set<OfferVersion>();
     public DbSet<CandidateOtp> CandidateOtps => Set<CandidateOtp>();
+    public DbSet<BackgroundVerification> BackgroundVerifications => Set<BackgroundVerification>();
+    public DbSet<PreboardingChecklistItem> PreboardingChecklistItems => Set<PreboardingChecklistItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

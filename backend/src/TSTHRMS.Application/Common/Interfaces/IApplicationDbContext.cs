@@ -38,6 +38,8 @@ public interface IApplicationDbContext
     DbSet<Offer> Offers { get; }
     DbSet<OfferVersion> OfferVersions { get; }
     DbSet<CandidateOtp> CandidateOtps { get; }
+    DbSet<BackgroundVerification> BackgroundVerifications { get; }
+    DbSet<PreboardingChecklistItem> PreboardingChecklistItems { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }
