@@ -1,12 +1,13 @@
-import { useQuery } from "@tanstack/react-query"
-import { CalendarClock, LogOut } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { CalendarClock, LogOut, ShieldAlert } from "lucide-react"
 import { useEffect } from "react"
 import { useNavigate, useParams } from "react-router-dom"
+import { toast } from "sonner"
 import { EmptyState } from "@/components/empty-state"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { getMyApplications } from "./api"
+import { getMyApplications, getMyDataDeletionRequest, requestDataDeletion } from "./api"
 import { useCandidateAuthStore } from "./candidate-auth-store"
 import { APPLICATION_STAGE_LABELS, ASSESSMENT_TYPE_LABELS, INTERVIEW_STATUS_LABELS, OFFER_STATUS_LABELS } from "./constants"
 import { PreboardingTasks } from "./preboarding-tasks"
@@ -28,6 +29,27 @@ export function CandidatePortalPage() {
     queryKey: ["careers", "candidate-portal", "applications"],
     queryFn: getMyApplications,
     enabled: Boolean(accessToken),
+  })
+
+  const queryClient = useQueryClient()
+  const deletionRequestQueryKey = ["careers", "candidate-portal", "data-deletion-request"]
+  const { data: deletionRequest } = useQuery({
+    queryKey: deletionRequestQueryKey,
+    queryFn: getMyDataDeletionRequest,
+    enabled: Boolean(accessToken),
+  })
+
+  const requestDeletionMutation = useMutation({
+    mutationFn: requestDataDeletion,
+    onSuccess: async (result) => {
+      if (result.succeeded) {
+        toast.success("Deletion request submitted - HR will review it shortly.")
+        await queryClient.invalidateQueries({ queryKey: deletionRequestQueryKey })
+      } else {
+        toast.error(result.error ?? "Couldn't submit a deletion request.")
+      }
+    },
+    onError: () => toast.error("Couldn't submit a deletion request."),
   })
 
   if (!accessToken) {
@@ -127,6 +149,35 @@ export function CandidatePortalPage() {
           ))}
         </div>
       )}
+
+      <div className="flex flex-col gap-2 rounded-xl border p-5">
+        <div className="flex items-center gap-2">
+          <ShieldAlert className="size-4 text-muted-foreground" />
+          <p className="font-heading font-semibold">Your data</p>
+        </div>
+        {deletionRequest ? (
+          <p className="text-sm text-muted-foreground">
+            {deletionRequest.status === "Pending" && "Your request to delete your data is pending HR review."}
+            {deletionRequest.status === "Approved" && "Your data has been deleted, as requested."}
+            {deletionRequest.status === "Rejected" && "Your deletion request was reviewed and not approved."}
+          </p>
+        ) : (
+          <>
+            <p className="text-sm text-muted-foreground">
+              You can request that we delete your personal data from our records at any time.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              onClick={() => requestDeletionMutation.mutate()}
+              disabled={requestDeletionMutation.isPending}
+            >
+              Request deletion of my data
+            </Button>
+          </>
+        )}
+      </div>
     </div>
   )
 }

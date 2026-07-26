@@ -18,6 +18,13 @@ public class CandidateConfiguration : IEntityTypeConfiguration<Candidate>
         builder.Property(c => c.CurrentCtc).HasPrecision(12, 2);
         builder.Property(c => c.ExpectedCtc).HasPrecision(12, 2);
         builder.Property(c => c.Source).HasConversion<string>().HasMaxLength(20);
+        builder.Property(c => c.ReferralBonusAmount).HasPrecision(12, 2);
+
+        // Explicit string default (not just the C# property initializer) so existing candidate
+        // rows get backfilled to a real enum name when this column is added - an empty-string
+        // default would fail to parse back into the enum on the very next read.
+        builder.Property(c => c.ReferralBonusStatus).HasConversion<string>().HasMaxLength(20)
+            .HasDefaultValue(ReferralBonusStatus.NotApplicable);
 
         // Not unique: a candidate could plausibly reuse a phone across a rare shared-number
         // edge case, and the dedupe check in CareerSiteService already looks up by this pair

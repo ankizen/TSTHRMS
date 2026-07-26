@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell"
 import { ProtectedRoute } from "@/components/protected-route"
 import { CustomFieldsPage } from "@/features/admin/custom-fields/custom-fields-page"
 import { EditRequestsPage } from "@/features/admin/edit-requests/edit-requests-page"
+import { RecruitmentSettingsPage } from "@/features/admin/recruitment-settings/recruitment-settings-page"
 import { UsersPage } from "@/features/admin/users/users-page"
 import { AssessmentPage } from "@/features/careers/assessment-page"
 import { CandidateLoginPage } from "@/features/careers/candidate-login-page"
@@ -20,9 +21,11 @@ import { MyTeamPage } from "@/features/my/my-team-page"
 import { OrgChartPage } from "@/features/org-chart/org-chart-page"
 import { ApplicantsPage } from "@/features/recruitment/applicants-page"
 import { MyInterviewsPage } from "@/features/recruitment/my-interviews-page"
+import { DataPrivacyPage } from "@/features/recruitment/data-privacy-page"
 import { OnboardingChecklistPage } from "@/features/recruitment/onboarding-checklist-page"
 import { MyReferralsPage } from "@/features/recruitment/referrals/my-referrals-page"
 import { ReferCandidatePage } from "@/features/recruitment/referrals/refer-candidate-page"
+import { ReferralPayoutsPage } from "@/features/recruitment/referrals/referral-payouts-page"
 import { RecruitmentReportingPage } from "@/features/recruitment/reporting-page"
 import { RequisitionDetailPage } from "@/features/recruitment/requisition-detail-page"
 import { RequisitionsListPage } from "@/features/recruitment/requisitions-list-page"
@@ -69,6 +72,9 @@ export function App() {
         <Route path="/recruitment/my-referrals" element={<MyReferralsPage />} />
         <Route path="/recruitment/employees/:employeeId/onboarding" element={<OnboardingChecklistPage />} />
         <Route path="/recruitment/reports" element={<RecruitmentReportingPage />} />
+        <Route path="/recruitment/referral-payouts" element={<ReferralPayoutsPage />} />
+        <Route path="/recruitment/data-privacy" element={<DataPrivacyPage />} />
+        <Route path="/admin/recruitment-settings" element={<RecruitmentSettingsPage />} />
         <Route path="/my/profile" element={<MyProfilePage />} />
         <Route path="/my/team" element={<MyTeamPage />} />
         <Route path="/my/interviews" element={<MyInterviewsPage />} />

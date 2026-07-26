@@ -1,5 +1,5 @@
 import { apiClient } from "@/lib/api-client"
-import type { ApplyResult, MyReferral, OpenJobOption, ReferralSubmissionRequest } from "./types"
+import type { ApplyResult, MyReferral, OpenJobOption, ReferralPayout, ReferralSubmissionRequest } from "./types"
 
 export async function getOpenJobs(): Promise<OpenJobOption[]> {
   const { data } = await apiClient.get<OpenJobOption[]>("/referrals/jobs")
@@ -25,4 +25,13 @@ export async function submitReferral(
 export async function getMyReferrals(): Promise<MyReferral[]> {
   const { data } = await apiClient.get<MyReferral[]>("/referrals/mine")
   return data
+}
+
+export async function getReferralPayouts(): Promise<ReferralPayout[]> {
+  const { data } = await apiClient.get<ReferralPayout[]>("/referrals/payouts")
+  return data
+}
+
+export async function markReferralBonusPaid(candidateId: string): Promise<void> {
+  await apiClient.post(`/referrals/payouts/${candidateId}/mark-paid`)
 }

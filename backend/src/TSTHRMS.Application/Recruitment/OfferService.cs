@@ -255,8 +255,17 @@ public class OfferService(
                 .Select(a => new { a.Candidate!.FirstName, a.Candidate.LastName, JobTitle = a.JobPosting!.Title })
                 .FirstOrDefaultAsync(cancellationToken);
 
-            letterText = BuildDefaultOfferLetterText(
-                $"{details?.FirstName} {details?.LastName}", details?.JobTitle ?? "the role", request);
+            var candidateName = $"{details?.FirstName} {details?.LastName}";
+            var jobTitle = details?.JobTitle ?? "the role";
+
+            var tenant = await dbContext.Tenants.AsNoTracking()
+                .Where(t => t.Id == tenantContext.TenantId)
+                .Select(t => new { t.Name, t.OfferLetterTemplate })
+                .FirstOrDefaultAsync(cancellationToken);
+
+            letterText = string.IsNullOrWhiteSpace(tenant?.OfferLetterTemplate)
+                ? BuildDefaultOfferLetterText(candidateName, jobTitle, request)
+                : RenderOfferLetterTemplate(tenant.OfferLetterTemplate, tenant.Name, candidateName, jobTitle, request);
         }
 
         return new OfferVersion
@@ -284,6 +293,22 @@ public class OfferService(
 
         We look forward to having you on the team.
         """;
+
+    /// <summary>Section 8's "build now, toggle later" admin-configurable offer letter -
+    /// plain string substitution, not a real templating engine, since the variable set is small
+    /// and fixed. Unknown/mistyped {{tokens}} are simply left as-is in the rendered text rather
+    /// than throwing, so a typo in the template never blocks sending a real offer.</summary>
+    private static string RenderOfferLetterTemplate(
+        string template, string companyName, string candidateName, string jobTitle, CreateOrReviseOfferRequest request) =>
+        template
+            .Replace("{{CandidateName}}", candidateName)
+            .Replace("{{Designation}}", request.Designation ?? jobTitle)
+            .Replace("{{CompanyName}}", companyName)
+            .Replace("{{AnnualCtc}}", request.AnnualCtc.ToString("N0"))
+            .Replace("{{FixedComponent}}", request.FixedComponent?.ToString("N0") ?? "-")
+            .Replace("{{VariableComponent}}", request.VariableComponent?.ToString("N0") ?? "-")
+            .Replace("{{JoiningBonus}}", request.JoiningBonus?.ToString("N0") ?? "-")
+            .Replace("{{DateOfJoining}}", request.DateOfJoining.ToString("d MMMM yyyy"));
 
     private async Task<OfferDto> MapAsync(Offer offer, CancellationToken cancellationToken)
     {

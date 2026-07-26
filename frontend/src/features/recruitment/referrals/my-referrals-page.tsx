@@ -25,14 +25,15 @@ export function MyReferralsPage() {
               <TableHead>Job</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>Referred on</TableHead>
+              <TableHead>Bonus</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableSkeletonRows columns={4} />
+              <TableSkeletonRows columns={5} />
             ) : referrals.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4}>
+                <TableCell colSpan={5}>
                   <EmptyState
                     icon={UsersRound}
                     title="No referrals yet"
@@ -50,6 +51,18 @@ export function MyReferralsPage() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {new Date(referral.appliedAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    {referral.referralBonusStatus === "NotApplicable" ? (
+                      <span className="text-muted-foreground">-</span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span>₹{referral.referralBonusAmount?.toLocaleString()}</span>
+                        <Badge variant={referral.referralBonusStatus === "Paid" ? "default" : "secondary"}>
+                          {referral.referralBonusStatus === "Paid" ? "Paid" : "Payable"}
+                        </Badge>
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

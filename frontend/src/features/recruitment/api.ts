@@ -3,8 +3,12 @@ import type {
   ApplicantListItem,
   AssessmentDetail,
   Bgv,
+  CandidateDataDeletionRequest,
+  CandidateDataDeletionRequestStatus,
   ConvertToEmployeeResult,
   CreateOrReviseOfferRequest,
+  DecideDeletionRequestRequest,
+  DecideDeletionRequestResult,
   InitiateBgvRequest,
   Interview,
   InterviewerCandidate,
@@ -27,11 +31,13 @@ import type {
   SendOfferRequest,
   SubmitScorecardRequest,
   TalentPoolCandidate,
+  TenantSettings,
   TestConfiguration,
   TestConfigurationRequest,
   UpdateBgvStatusRequest,
   UpdateInterviewStatusRequest,
   UpdateOnboardingItemRequest,
+  UpdateTenantSettingsRequest,
 } from "./types"
 
 export async function getRequisitions(status?: RequisitionStatus): Promise<JobRequisitionListItem[]> {
@@ -274,5 +280,38 @@ export async function completeOnboardingItem(itemId: string): Promise<Onboarding
 
 export async function getRecruitmentReport(): Promise<RecruitmentReport> {
   const { data } = await apiClient.get<RecruitmentReport>("/recruitment/reports")
+  return data
+}
+
+export async function getTenantSettings(): Promise<TenantSettings> {
+  const { data } = await apiClient.get<TenantSettings>("/recruitment/settings")
+  return data
+}
+
+export async function updateTenantSettings(request: UpdateTenantSettingsRequest): Promise<TenantSettings> {
+  const { data } = await apiClient.put<TenantSettings>("/recruitment/settings", request)
+  return data
+}
+
+export async function getDeletionRequests(
+  status?: CandidateDataDeletionRequestStatus,
+): Promise<CandidateDataDeletionRequest[]> {
+  const { data } = await apiClient.get<CandidateDataDeletionRequest[]>(
+    "/recruitment/data-privacy/deletion-requests", { params: { status } },
+  )
+  return data
+}
+
+export async function decideDeletionRequest(
+  requestId: string, request: DecideDeletionRequestRequest,
+): Promise<DecideDeletionRequestResult> {
+  const { data } = await apiClient.post<DecideDeletionRequestResult>(
+    `/recruitment/data-privacy/deletion-requests/${requestId}/decide`, request,
+  )
+  return data
+}
+
+export async function runRetentionSweep(): Promise<number> {
+  const { data } = await apiClient.post<number>("/recruitment/data-privacy/run-retention-sweep")
   return data
 }

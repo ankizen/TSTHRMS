@@ -41,6 +41,7 @@ public interface IApplicationDbContext
     DbSet<BackgroundVerification> BackgroundVerifications { get; }
     DbSet<PreboardingChecklistItem> PreboardingChecklistItems { get; }
     DbSet<OnboardingChecklistItem> OnboardingChecklistItems { get; }
+    DbSet<CandidateDataDeletionRequest> CandidateDataDeletionRequests { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

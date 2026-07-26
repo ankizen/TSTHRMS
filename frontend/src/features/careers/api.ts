@@ -3,6 +3,7 @@ import { candidateApiClient } from "./candidate-api-client"
 import type {
   ApplyResult,
   CandidateLoginResult,
+  DataDeletionRequest,
   MyApplication,
   MyPreboardingTask,
   PreboardingTaskType,
@@ -13,6 +14,7 @@ import type {
   PublicJobFilter,
   PublicJobListItem,
   PublicOffer,
+  RequestDeletionResult,
   SubmitBankDetailsRequest,
 } from "./types"
 
@@ -117,4 +119,18 @@ export async function submitPreboardingBankDetails(
   applicationId: string, request: SubmitBankDetailsRequest,
 ): Promise<void> {
   await candidateApiClient.post(`/candidate-portal/applications/${applicationId}/preboarding/bank-details`, request)
+}
+
+export async function requestDataDeletion(): Promise<RequestDeletionResult> {
+  const { data } = await candidateApiClient.post<RequestDeletionResult>("/candidate-portal/data-deletion-request")
+  return data
+}
+
+export async function getMyDataDeletionRequest(): Promise<DataDeletionRequest | null> {
+  try {
+    const { data } = await candidateApiClient.get<DataDeletionRequest>("/candidate-portal/data-deletion-request")
+    return data
+  } catch {
+    return null
+  }
 }

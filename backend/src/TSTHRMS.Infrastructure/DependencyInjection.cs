@@ -11,6 +11,7 @@ using TSTHRMS.Application.Employees;
 using TSTHRMS.Application.Users;
 using TSTHRMS.Application.Recruitment;
 using TSTHRMS.Infrastructure.Auth;
+using TSTHRMS.Infrastructure.BackgroundJobs;
 using TSTHRMS.Infrastructure.Email;
 using TSTHRMS.Infrastructure.Identity;
 using TSTHRMS.Infrastructure.Persistence;
@@ -96,6 +97,9 @@ public static class DependencyInjection
         services.AddScoped<IPreboardingService, PreboardingService>();
         services.AddScoped<IOnboardingService, OnboardingService>();
         services.AddScoped<IRecruitmentReportingService, RecruitmentReportingService>();
+        services.AddScoped<ITenantSettingsService, TenantSettingsService>();
+        services.AddScoped<IDataPrivacyService, DataPrivacyService>();
+        services.AddHostedService<CandidateRetentionHostedService>();
 
         return services;
     }

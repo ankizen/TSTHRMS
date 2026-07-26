@@ -375,7 +375,9 @@ public record ReferralSubmissionRequest(string FirstName, string LastName, strin
 
 /// <summary>Stage only - Section 4: "referral status visible to the referring employee (without
 /// exposing full interview feedback)".</summary>
-public record MyReferralDto(Guid CandidateId, string CandidateName, string JobPostingTitle, ApplicationStage Stage, DateTimeOffset AppliedAt);
+public record MyReferralDto(
+    Guid CandidateId, string CandidateName, string JobPostingTitle, ApplicationStage Stage, DateTimeOffset AppliedAt,
+    ReferralBonusStatus ReferralBonusStatus, decimal? ReferralBonusAmount);
 
 // ---- Background Verification (Section 9) ----
 
@@ -468,3 +470,46 @@ public record RecruitmentReportDto(
     IReadOnlyList<SourceEffectivenessDto> SourceEffectiveness,
     IReadOnlyList<RequisitionAgeingDto> RequisitionAgeing,
     IReadOnlyList<TimeToHireByPostingDto> TimeToHireByPosting);
+
+// ---- Recruitment Settings: retention, referral bonus, offer letter template (Sections 4, 8, 13) ----
+
+public record TenantSettingsDto(int RejectedCandidateRetentionDays, decimal? ReferralBonusAmount, string? OfferLetterTemplate);
+
+public record UpdateTenantSettingsRequest(int RejectedCandidateRetentionDays, decimal? ReferralBonusAmount, string? OfferLetterTemplate);
+
+// ---- Referral Bonus Payouts (Section 4) ----
+
+public record ReferralPayoutDto(
+    Guid CandidateId,
+    string CandidateName,
+    string ReferredByEmployeeName,
+    string JobPostingTitle,
+    decimal BonusAmount,
+    ReferralBonusStatus Status,
+    DateTimeOffset? PaidAt);
+
+// ---- Candidate Data Privacy / DPDPA (Section 13) ----
+
+public record CandidateDataDeletionRequestDto(
+    Guid Id,
+    Guid CandidateId,
+    string CandidateName,
+    string CandidateEmail,
+    DateTimeOffset RequestedAt,
+    CandidateDataDeletionRequestStatus Status,
+    string? HrDecisionNotes,
+    DateTimeOffset? DecidedAt);
+
+public record RequestDeletionResult(bool Succeeded, string? Error)
+{
+    public static RequestDeletionResult Success() => new(true, null);
+    public static RequestDeletionResult Failure(string error) => new(false, error);
+}
+
+public record DecideDeletionRequestRequest(bool Approve, string? Notes);
+
+public record DecideDeletionRequestResult(bool Succeeded, string? Error, CandidateDataDeletionRequestDto? Request)
+{
+    public static DecideDeletionRequestResult Success(CandidateDataDeletionRequestDto request) => new(true, null, request);
+    public static DecideDeletionRequestResult Failure(string error) => new(false, error, null);
+}

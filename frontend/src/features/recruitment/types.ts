@@ -430,4 +430,40 @@ export interface RecruitmentReport {
   timeToHireByPosting: TimeToHireByPosting[]
 }
 
+export interface TenantSettings {
+  rejectedCandidateRetentionDays: number
+  referralBonusAmount: number | null
+  offerLetterTemplate: string | null
+}
+
+export interface UpdateTenantSettingsRequest {
+  rejectedCandidateRetentionDays: number
+  referralBonusAmount: number | null
+  offerLetterTemplate: string | null
+}
+
+export type CandidateDataDeletionRequestStatus = "Pending" | "Approved" | "Rejected"
+
+export interface CandidateDataDeletionRequest {
+  id: string
+  candidateId: string
+  candidateName: string
+  candidateEmail: string
+  requestedAt: string
+  status: CandidateDataDeletionRequestStatus
+  hrDecisionNotes: string | null
+  decidedAt: string | null
+}
+
+export interface DecideDeletionRequestRequest {
+  approve: boolean
+  notes: string | null
+}
+
+export interface DecideDeletionRequestResult {
+  succeeded: boolean
+  error: string | null
+  request: CandidateDataDeletionRequest | null
+}
+
 export type { Lookup }

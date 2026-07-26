@@ -874,6 +874,257 @@ public class RecruitmentFlowTests : IAsyncLifetime
         ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles) =>
         new(context, new TestCurrentUserService(userId, roles));
 
+    [Fact]
+    public async Task Referral_bonus_becomes_payable_on_hire_and_hr_can_mark_it_paid()
+    {
+        await using var context = CreateContext(_tenantId);
+        await SeedTenantAsync(context);
+        await CreateTenantSettingsService(context).UpdateAsync(new UpdateTenantSettingsRequest(180, 25000m, null));
+
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Referral Bonus Role");
+
+        var referringEmployeeId = Guid.NewGuid();
+        var referralService = new ReferralService(
+            context, new TestCurrentUserService(Guid.NewGuid(), [], referringEmployeeId), careerSiteService);
+
+        var referralResult = await referralService.SubmitReferralAsync(
+            posting.Slug, new ReferralSubmissionRequest("Ada", "Lovelace", "ada.lovelace@example.com", "9999999980"),
+            null, null, null, 0);
+        Assert.True(referralResult.Succeeded);
+        var applicationId = referralResult.ApplicationId!.Value;
+
+        var hrOfferService = CreateOfferService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var offer = await hrOfferService.CreateAsync(
+            applicationId, new CreateOrReviseOfferRequest("Engineer", new DateOnly(2026, 9, 1), 1200000m, null, null, null, null, null));
+        await hrOfferService.SubmitForApprovalAsync(offer!.Id);
+        await hrOfferService.ApproveAsync(offer.Id, new OfferDecisionRequest(null));
+        await hrOfferService.SendAsync(offer.Id, new SendOfferRequest(7));
+        var offerToken = await context.Offers.Where(o => o.ApplicationId == applicationId).Select(o => o.Token).SingleAsync();
+        await hrOfferService.RespondPublicOfferAsync(offerToken, new PublicOfferDecisionRequest(true, null));
+
+        var hrOnboardingService = CreateOnboardingService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var conversion = await hrOnboardingService.ConvertToEmployeeAsync(applicationId);
+        Assert.True(conversion.Succeeded);
+
+        var candidateId = await context.Candidates.AsNoTracking()
+            .Where(c => c.Email == "ada.lovelace@example.com").Select(c => c.Id).SingleAsync();
+        var candidate = await context.Candidates.AsNoTracking().SingleAsync(c => c.Id == candidateId);
+        Assert.Equal(ReferralBonusStatus.Payable, candidate.ReferralBonusStatus);
+        Assert.Equal(25000m, candidate.ReferralBonusAmount);
+
+        var hrReferralService = new ReferralService(
+            context, new TestCurrentUserService(Guid.NewGuid(), [RoleNames.HRAdmin]), careerSiteService);
+        var payouts = await hrReferralService.GetPayoutsAsync();
+        var payout = Assert.Single(payouts);
+        Assert.Equal(candidateId, payout.CandidateId);
+        Assert.Equal(ReferralBonusStatus.Payable, payout.Status);
+
+        Assert.True(await hrReferralService.MarkBonusPaidAsync(candidateId));
+        var candidateAfterPaid = await context.Candidates.AsNoTracking().SingleAsync(c => c.Id == candidateId);
+        Assert.Equal(ReferralBonusStatus.Paid, candidateAfterPaid.ReferralBonusStatus);
+        Assert.NotNull(candidateAfterPaid.ReferralBonusPaidAt);
+
+        // Already Paid - can't be marked paid a second time.
+        Assert.False(await hrReferralService.MarkBonusPaidAsync(candidateId));
+    }
+
+    [Fact]
+    public async Task Offer_letter_renders_the_tenant_template_with_merge_variables_when_configured()
+    {
+        await using var context = CreateContext(_tenantId);
+        await SeedTenantAsync(context);
+        await CreateTenantSettingsService(context).UpdateAsync(new UpdateTenantSettingsRequest(
+            180, null, "Dear {{CandidateName}}, welcome to {{CompanyName}} as {{Designation}} at {{AnnualCtc}} per year."));
+
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Template Test Role");
+
+        using var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray());
+        var applyResult = await careerSiteService.ApplyAsync(
+            posting.Slug, new PublicApplicationRequest("Katherine", "Johnson", "katherine@example.com", "9999999979", null, null, null, true),
+            CandidateSource.CareerSite, null, resume, "resume.pdf", "application/pdf", resume.Length);
+        var applicationId = applyResult.ApplicationId!.Value;
+
+        var hrOfferService = CreateOfferService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var offer = await hrOfferService.CreateAsync(
+            applicationId, new CreateOrReviseOfferRequest("Senior Engineer", new DateOnly(2026, 9, 1), 1500000m, null, null, null, null, null));
+
+        var offerLetterText = await context.Offers.AsNoTracking()
+            .Where(o => o.Id == offer!.Id)
+            .SelectMany(o => o.Versions)
+            .Select(v => v.OfferLetterText)
+            .SingleAsync();
+
+        Assert.Contains("Dear Katherine Johnson", offerLetterText);
+        Assert.Contains("Test Tenant", offerLetterText);
+        Assert.Contains("Senior Engineer", offerLetterText);
+        Assert.Contains(1500000m.ToString("N0"), offerLetterText);
+    }
+
+    [Fact]
+    public async Task Candidate_can_self_serve_a_deletion_request_and_hr_can_approve_it()
+    {
+        await using var context = CreateContext(_tenantId);
+        await SeedTenantAsync(context);
+
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Privacy Test Role");
+
+        using var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray());
+        await careerSiteService.ApplyAsync(
+            posting.Slug, new PublicApplicationRequest("Rejected", "Person", "rejected.person@example.com", "9999999978", null, null, null, true),
+            CandidateSource.CareerSite, null, resume, "resume.pdf", "application/pdf", resume.Length);
+        var candidateId = await context.Candidates.AsNoTracking()
+            .Where(c => c.Email == "rejected.person@example.com").Select(c => c.Id).SingleAsync();
+
+        var candidateDataPrivacyService = CreateDataPrivacyService(context, Guid.NewGuid(), [], candidateId);
+        Assert.True((await candidateDataPrivacyService.RequestDeletionAsync()).Succeeded);
+
+        // Can't submit a second request while one is already pending.
+        Assert.False((await candidateDataPrivacyService.RequestDeletionAsync()).Succeeded);
+
+        var myRequest = await candidateDataPrivacyService.GetMyDeletionRequestAsync();
+        Assert.Equal(CandidateDataDeletionRequestStatus.Pending, myRequest!.Status);
+
+        var hrDataPrivacyService = CreateDataPrivacyService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var pendingRequest = Assert.Single(
+            await hrDataPrivacyService.GetDeletionRequestsAsync(CandidateDataDeletionRequestStatus.Pending));
+
+        var decision = await hrDataPrivacyService.DecideDeletionRequestAsync(
+            pendingRequest.Id, new DecideDeletionRequestRequest(true, "Confirmed identity, approving erasure."));
+        Assert.True(decision.Succeeded);
+
+        var anonymizedCandidate = await context.Candidates.AsNoTracking().SingleAsync(c => c.Id == candidateId);
+        Assert.True(anonymizedCandidate.IsAnonymized);
+        Assert.Equal("Redacted", anonymizedCandidate.FirstName);
+        Assert.StartsWith("redacted-", anonymizedCandidate.Email);
+        Assert.Null(anonymizedCandidate.ResumeDocumentId);
+    }
+
+    [Fact]
+    public async Task Deletion_request_is_refused_once_the_candidate_has_been_hired()
+    {
+        await using var context = CreateContext(_tenantId);
+        await SeedTenantAsync(context);
+
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Hired Privacy Role");
+
+        using var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray());
+        var applyResult = await careerSiteService.ApplyAsync(
+            posting.Slug, new PublicApplicationRequest("Soon", "Hired", "soon.hired@example.com", "9999999977", null, null, null, true),
+            CandidateSource.CareerSite, null, resume, "resume.pdf", "application/pdf", resume.Length);
+        var applicationId = applyResult.ApplicationId!.Value;
+        var candidateId = await context.Candidates.AsNoTracking()
+            .Where(c => c.Email == "soon.hired@example.com").Select(c => c.Id).SingleAsync();
+
+        var hrOfferService = CreateOfferService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var offer = await hrOfferService.CreateAsync(
+            applicationId, new CreateOrReviseOfferRequest("Engineer", new DateOnly(2026, 9, 1), 1000000m, null, null, null, null, null));
+        await hrOfferService.SubmitForApprovalAsync(offer!.Id);
+        await hrOfferService.ApproveAsync(offer.Id, new OfferDecisionRequest(null));
+        await hrOfferService.SendAsync(offer.Id, new SendOfferRequest(7));
+        var offerToken = await context.Offers.Where(o => o.ApplicationId == applicationId).Select(o => o.Token).SingleAsync();
+        await hrOfferService.RespondPublicOfferAsync(offerToken, new PublicOfferDecisionRequest(true, null));
+
+        var hrOnboardingService = CreateOnboardingService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        Assert.True((await hrOnboardingService.ConvertToEmployeeAsync(applicationId)).Succeeded);
+
+        var candidateDataPrivacyService = CreateDataPrivacyService(context, Guid.NewGuid(), [], candidateId);
+        Assert.True((await candidateDataPrivacyService.RequestDeletionAsync()).Succeeded);
+
+        var hrDataPrivacyService = CreateDataPrivacyService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var pendingRequest = Assert.Single(
+            await hrDataPrivacyService.GetDeletionRequestsAsync(CandidateDataDeletionRequestStatus.Pending));
+
+        var decision = await hrDataPrivacyService.DecideDeletionRequestAsync(
+            pendingRequest.Id, new DecideDeletionRequestRequest(true, null));
+        Assert.False(decision.Succeeded);
+
+        var candidateAfter = await context.Candidates.AsNoTracking().SingleAsync(c => c.Id == candidateId);
+        Assert.False(candidateAfter.IsAnonymized);
+    }
+
+    [Fact]
+    public async Task Retention_sweep_anonymizes_stale_rejected_candidates_but_exempts_recent_and_talent_pool_ones()
+    {
+        await using var context = CreateContext(_tenantId);
+        await SeedTenantAsync(context); // default 180-day retention
+        var now = DateTimeOffset.UtcNow;
+
+        var managerService = CreateRequisitionService(context, _managerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Sweep Test Role");
+
+        var staleRejected = new Candidate
+        {
+            FirstName = "Stale", LastName = "Rejected", Email = "stale.rejected@example.com", Phone = "9000000010",
+            Source = CandidateSource.CareerSite, ConsentGivenAt = now.AddDays(-200),
+        };
+        var recentRejected = new Candidate
+        {
+            FirstName = "Recent", LastName = "Rejected", Email = "recent.rejected@example.com", Phone = "9000000011",
+            Source = CandidateSource.CareerSite, ConsentGivenAt = now.AddDays(-10),
+        };
+        var talentPoolRejected = new Candidate
+        {
+            FirstName = "TalentPool", LastName = "Rejected", Email = "talentpool.rejected@example.com", Phone = "9000000012",
+            Source = CandidateSource.CareerSite, ConsentGivenAt = now.AddDays(-200), IsInTalentPool = true,
+        };
+        context.Candidates.AddRange(staleRejected, recentRejected, talentPoolRejected);
+        await context.SaveChangesAsync();
+
+        context.Applications.AddRange(
+            new JobApplication
+            {
+                CandidateId = staleRejected.Id, JobPostingId = posting.Id, Stage = ApplicationStage.Rejected,
+                StageChangedAt = now.AddDays(-200), AppliedAt = now.AddDays(-210),
+            },
+            new JobApplication
+            {
+                CandidateId = recentRejected.Id, JobPostingId = posting.Id, Stage = ApplicationStage.Rejected,
+                StageChangedAt = now.AddDays(-10), AppliedAt = now.AddDays(-20),
+            },
+            new JobApplication
+            {
+                CandidateId = talentPoolRejected.Id, JobPostingId = posting.Id, Stage = ApplicationStage.Rejected,
+                StageChangedAt = now.AddDays(-200), AppliedAt = now.AddDays(-210),
+            });
+        await context.SaveChangesAsync();
+
+        var hrDataPrivacyService = CreateDataPrivacyService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        Assert.Equal(1, await hrDataPrivacyService.RunRetentionSweepAsync());
+
+        Assert.True((await context.Candidates.AsNoTracking().SingleAsync(c => c.Id == staleRejected.Id)).IsAnonymized);
+        Assert.False((await context.Candidates.AsNoTracking().SingleAsync(c => c.Id == recentRejected.Id)).IsAnonymized);
+        Assert.False((await context.Candidates.AsNoTracking().SingleAsync(c => c.Id == talentPoolRejected.Id)).IsAnonymized);
+    }
+
+    private async Task<Domain.Tenancy.Tenant> SeedTenantAsync(ApplicationDbContext context)
+    {
+        var tenant = new Domain.Tenancy.Tenant { Id = _tenantId, Name = "Test Tenant", Slug = $"test-{_tenantId:N}" };
+        context.Tenants.Add(tenant);
+        await context.SaveChangesAsync();
+        return tenant;
+    }
+
+    private TenantSettingsService CreateTenantSettingsService(ApplicationDbContext context) =>
+        new(context, new TestTenantContext(_tenantId));
+
+    private DataPrivacyService CreateDataPrivacyService(
+        ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles, Guid? candidateId = null) =>
+        new(context, new TestTenantContext(_tenantId), new TestCurrentUserService(userId, roles),
+            new TestCandidateContext(candidateId), new LocalFileStorageService(new TestFileStorageOptions(_storageRoot)));
+
     private OnboardingService CreateOnboardingService(
         ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles,
         Guid? employeeId = null, IUserDirectory? userDirectory = null)

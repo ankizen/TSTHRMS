@@ -140,3 +140,21 @@ export interface SubmitBankDetailsRequest {
   bankAccountNumber: string
   bankIfscCode: string
 }
+
+export type DataDeletionRequestStatus = "Pending" | "Approved" | "Rejected"
+
+export interface DataDeletionRequest {
+  id: string
+  candidateId: string
+  candidateName: string
+  candidateEmail: string
+  requestedAt: string
+  status: DataDeletionRequestStatus
+  hrDecisionNotes: string | null
+  decidedAt: string | null
+}
+
+export interface RequestDeletionResult {
+  succeeded: boolean
+  error: string | null
+}

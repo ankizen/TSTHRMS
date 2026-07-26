@@ -37,6 +37,20 @@ public class Candidate : TenantScopedEntity
     /// <summary>Section 5: rejected-but-good candidates tagged "Keep in mind" instead of lost.</summary>
     public bool IsInTalentPool { get; set; }
 
+    /// <summary>Section 13 (DPDPA 2023): set once by either the retention sweep or an approved
+    /// self-service deletion request. PII fields (name/email/phone/CTC) are overwritten in place
+    /// rather than the row being deleted - the pipeline history (Applications/Offers) stays for
+    /// audit and reporting, same append-only philosophy used everywhere else in this module.</summary>
+    public bool IsAnonymized { get; set; }
+    public DateTimeOffset? AnonymizedAt { get; set; }
+
+    /// <summary>Section 4: snapshotted from Tenant.ReferralBonusAmount the moment this candidate
+    /// is converted to an employee, so a later change to the tenant-wide amount doesn't
+    /// retroactively alter an already-decided payout.</summary>
+    public decimal? ReferralBonusAmount { get; set; }
+    public ReferralBonusStatus ReferralBonusStatus { get; set; } = ReferralBonusStatus.NotApplicable;
+    public DateTimeOffset? ReferralBonusPaidAt { get; set; }
+
     public ICollection<JobApplication> Applications { get; set; } = new List<JobApplication>();
 }
 
@@ -49,4 +63,11 @@ public enum CandidateSource
     Indeed,
     WalkIn,
     CampusDrive
+}
+
+public enum ReferralBonusStatus
+{
+    NotApplicable,
+    Payable,
+    Paid
 }

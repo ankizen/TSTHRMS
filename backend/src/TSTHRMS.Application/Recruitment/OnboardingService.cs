@@ -111,6 +111,7 @@ public class OnboardingService(
 
         await AttachPreboardingDocumentsAsync(applicationId, employee.Id, cancellationToken);
         CreateOnboardingChecklist(employee.Id, request.DateOfJoining);
+        await MarkReferralBonusPayableAsync(candidate, cancellationToken);
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -229,6 +230,30 @@ public class OnboardingService(
                     + "(degree/institution, ID type/number, or previous employer) once verified.",
             });
         }
+    }
+
+    /// <summary>Section 4: a referral's bonus becomes Payable the moment the referred candidate
+    /// is actually hired - snapshotting Tenant.ReferralBonusAmount at that instant so a later
+    /// change to the tenant-wide amount doesn't retroactively alter this payout.</summary>
+    private async Task MarkReferralBonusPayableAsync(Candidate candidate, CancellationToken cancellationToken)
+    {
+        if (candidate.Source != CandidateSource.Referral || candidate.ReferredByEmployeeId is null)
+        {
+            return;
+        }
+
+        var bonusAmount = await dbContext.Tenants.AsNoTracking()
+            .Where(t => t.Id == candidate.TenantId)
+            .Select(t => t.ReferralBonusAmount)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (bonusAmount is null)
+        {
+            return;
+        }
+
+        candidate.ReferralBonusAmount = bonusAmount;
+        candidate.ReferralBonusStatus = ReferralBonusStatus.Payable;
     }
 
     private void CreateOnboardingChecklist(Guid employeeId, DateOnly dateOfJoining)

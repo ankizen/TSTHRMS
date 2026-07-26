@@ -16,7 +16,8 @@ namespace TSTHRMS.Api.Controllers;
 [Authorize]
 [Route("api/candidate-portal")]
 public class CandidatePortalController(
-    ICandidatePortalService candidatePortalService, IPreboardingService preboardingService) : ControllerBase
+    ICandidatePortalService candidatePortalService, IPreboardingService preboardingService,
+    IDataPrivacyService dataPrivacyService) : ControllerBase
 {
     private const long MaxDocumentSizeBytes = 10 * 1024 * 1024;
 
@@ -58,5 +59,20 @@ public class CandidatePortalController(
     {
         var succeeded = await preboardingService.SubmitBankDetailsAsync(applicationId, request, cancellationToken);
         return succeeded ? NoContent() : BadRequest(new { error = "Couldn't submit bank details." });
+    }
+
+    /// <summary>Section 13 (DPDPA 2023): the candidate's own "right to erasure" request.</summary>
+    [HttpPost("data-deletion-request")]
+    public async Task<ActionResult<RequestDeletionResult>> RequestDataDeletion(CancellationToken cancellationToken)
+    {
+        var result = await dataPrivacyService.RequestDeletionAsync(cancellationToken);
+        return result.Succeeded ? Ok(result) : BadRequest(result);
+    }
+
+    [HttpGet("data-deletion-request")]
+    public async Task<ActionResult<CandidateDataDeletionRequestDto>> GetMyDataDeletionRequest(CancellationToken cancellationToken)
+    {
+        var request = await dataPrivacyService.GetMyDeletionRequestAsync(cancellationToken);
+        return request is null ? NotFound() : Ok(request);
     }
 }

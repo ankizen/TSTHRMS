@@ -56,6 +56,7 @@ public class ApplicationDbContext(
     public DbSet<BackgroundVerification> BackgroundVerifications => Set<BackgroundVerification>();
     public DbSet<PreboardingChecklistItem> PreboardingChecklistItems => Set<PreboardingChecklistItem>();
     public DbSet<OnboardingChecklistItem> OnboardingChecklistItems => Set<OnboardingChecklistItem>();
+    public DbSet<CandidateDataDeletionRequest> CandidateDataDeletionRequests => Set<CandidateDataDeletionRequest>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

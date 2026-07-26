@@ -20,10 +20,24 @@ export interface ApplyResult {
   applicationId: string | null
 }
 
+export type ReferralBonusStatus = "NotApplicable" | "Payable" | "Paid"
+
 export interface MyReferral {
   candidateId: string
   candidateName: string
   jobPostingTitle: string
   stage: ApplicationStage
   appliedAt: string
+  referralBonusStatus: ReferralBonusStatus
+  referralBonusAmount: number | null
+}
+
+export interface ReferralPayout {
+  candidateId: string
+  candidateName: string
+  referredByEmployeeName: string
+  jobPostingTitle: string
+  bonusAmount: number
+  status: ReferralBonusStatus
+  paidAt: string | null
 }
