@@ -1,3 +1,4 @@
+using TSTHRMS.Application.Employees.Dtos;
 using TSTHRMS.Domain.Employees;
 using TSTHRMS.Domain.Recruitment;
 
@@ -408,3 +409,23 @@ public record SubmitBankDetailsRequest(string BankAccountNumber, string BankIfsc
 /// anything HR-internal (there's nothing hidden here, but kept as its own DTO so the two can
 /// diverge later without a breaking change).</summary>
 public record MyPreboardingTaskDto(PreboardingTaskType TaskType, PreboardingTaskStatus Status, DateTimeOffset? CompletedAt);
+
+// ---- Onboarding Day-1 Conversion (Section 11) ----
+
+public record ConvertToEmployeeResult(bool Succeeded, string? Error, EmployeeDto? Employee)
+{
+    public static ConvertToEmployeeResult Success(EmployeeDto employee) => new(true, null, employee);
+    public static ConvertToEmployeeResult Failure(string error) => new(false, error, null);
+}
+
+public record OnboardingChecklistItemDto(
+    Guid Id,
+    OnboardingTaskType TaskType,
+    Guid? OwnerUserId,
+    string? OwnerDisplayName,
+    DateOnly DueDate,
+    OnboardingTaskStatus Status,
+    DateTimeOffset? CompletedAt,
+    bool IsOverdue);
+
+public record UpdateOnboardingItemRequest(Guid? OwnerUserId, DateOnly? DueDate);

@@ -4,10 +4,12 @@ using Microsoft.EntityFrameworkCore;
 using Testcontainers.MySql;
 using TSTHRMS.Application.Common;
 using TSTHRMS.Application.Common.Interfaces;
+using TSTHRMS.Application.Employees;
 using TSTHRMS.Application.Recruitment;
 using TSTHRMS.Application.Recruitment.Dtos;
 using TSTHRMS.Application.Users;
 using TSTHRMS.Application.Users.Dtos;
+using TSTHRMS.Domain.Employees;
 using TSTHRMS.Domain.Recruitment;
 using TSTHRMS.Domain.Tenancy;
 using TSTHRMS.Infrastructure.Auth;
@@ -663,6 +665,106 @@ public class RecruitmentFlowTests : IAsyncLifetime
             applicationId, new UpdateBgvStatusRequest(BgvStatus.Clear, null)));
     }
 
+    [Fact]
+    public async Task Converting_an_accepted_offer_creates_an_employee_and_an_onboarding_checklist()
+    {
+        await using var context = CreateContext(_tenantId);
+        var hiringManagerUserId = _managerUserId;
+        var reportingManagerEmployeeId = Guid.NewGuid();
+        var userDirectory = new NoOpUserDirectory(new Dictionary<Guid, Guid> { [hiringManagerUserId] = reportingManagerEmployeeId });
+
+        var managerService = CreateRequisitionService(context, hiringManagerUserId, []);
+        var hrService = CreateRequisitionService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var careerSiteService = CreateCareerSiteService(context);
+
+        var posting = await PublishRequisitionAsync(managerService, hrService, "Backend Developer");
+
+        using var resume = new MemoryStream("%PDF-1.4 resume"u8.ToArray());
+        var applyResult = await careerSiteService.ApplyAsync(
+            posting.Slug, new PublicApplicationRequest("Grace", "Hopper", "grace.hopper@example.com", "9999999987", null, null, null, true),
+            CandidateSource.CareerSite, null, resume, "resume.pdf", "application/pdf", resume.Length);
+        var applicationId = applyResult.ApplicationId!.Value;
+
+        var hrOfferService = CreateOfferService(context, Guid.NewGuid(), [RoleNames.HRAdmin]);
+        var offer = await hrOfferService.CreateAsync(
+            applicationId, new CreateOrReviseOfferRequest("Backend Developer", new DateOnly(2026, 9, 1), 2400000m, null, null, null, null, null));
+        await hrOfferService.SubmitForApprovalAsync(offer!.Id);
+        await hrOfferService.ApproveAsync(offer.Id, new OfferDecisionRequest(null));
+        await hrOfferService.SendAsync(offer.Id, new SendOfferRequest(7));
+        var offerToken = await context.Offers.Where(o => o.ApplicationId == applicationId).Select(o => o.Token).SingleAsync();
+        await hrOfferService.RespondPublicOfferAsync(offerToken, new PublicOfferDecisionRequest(true, null));
+
+        // Pre-boarding data that should carry across into the new Employee record.
+        var candidateId = await context.Candidates.AsNoTracking()
+            .Where(c => c.Email == "grace.hopper@example.com").Select(c => c.Id).SingleAsync();
+        var candidatePreboardingService = CreatePreboardingService(context, Guid.NewGuid(), [], candidateId);
+        await candidatePreboardingService.SubmitBankDetailsAsync(
+            applicationId, new SubmitBankDetailsRequest("1112223334445556", "ICIC0001112"));
+        using (var certificate = new MemoryStream("%PDF-1.4 cert"u8.ToArray()))
+        {
+            await candidatePreboardingService.SubmitDocumentTaskAsync(
+                applicationId, PreboardingTaskType.EducationCertificate, certificate, "degree.pdf", "application/pdf", certificate.Length);
+        }
+
+        var hrOnboardingService = CreateOnboardingService(context, Guid.NewGuid(), [RoleNames.HRAdmin], userDirectory: userDirectory);
+        var conversion = await hrOnboardingService.ConvertToEmployeeAsync(applicationId);
+
+        Assert.True(conversion.Succeeded);
+        Assert.NotNull(conversion.Employee);
+        Assert.StartsWith("EMP", conversion.Employee!.EmployeeCode);
+        Assert.Equal("Grace", conversion.Employee.FirstName);
+        Assert.Equal(200000m, conversion.Employee.MonthlyGrossSalary); // 2,400,000 / 12
+        Assert.Equal(Gender.PreferNotToSay, conversion.Employee.Gender);
+        Assert.EndsWith("5556", conversion.Employee.BankAccountNumberMasked);
+
+        var employee = await context.Employees.AsNoTracking().SingleAsync(e => e.Id == conversion.Employee.Id);
+        Assert.Equal(applicationId, employee.SourceApplicationId);
+        Assert.Equal(reportingManagerEmployeeId, employee.ReportingManagerId);
+
+        var application = await context.Applications.AsNoTracking().SingleAsync(a => a.Id == applicationId);
+        Assert.Equal(ApplicationStage.Hired, application.Stage);
+
+        // Converting an already-Hired application again fails outright.
+        var secondConversion = await hrOnboardingService.ConvertToEmployeeAsync(applicationId);
+        Assert.False(secondConversion.Succeeded);
+
+        var employeeDocument = await context.EmployeeDocuments.AsNoTracking()
+            .SingleAsync(d => d.EmployeeId == employee.Id);
+        Assert.Equal(Domain.Documents.EmployeeDocumentCategory.EducationCertificate, employeeDocument.Category);
+
+        var checklist = await hrOnboardingService.GetChecklistAsync(employee.Id);
+        Assert.Equal(5, checklist!.Count);
+        Assert.All(checklist, item => Assert.Equal(new DateOnly(2026, 9, 1), item.DueDate));
+
+        // The reporting manager can see/act on the checklist; an unrelated manager can't.
+        var reportingManagerOnboardingService = CreateOnboardingService(
+            context, Guid.NewGuid(), [], reportingManagerEmployeeId, userDirectory);
+        Assert.NotNull(await reportingManagerOnboardingService.GetChecklistAsync(employee.Id));
+
+        var unrelatedManagerOnboardingService = CreateOnboardingService(
+            context, Guid.NewGuid(), [], Guid.NewGuid(), userDirectory);
+        Assert.Null(await unrelatedManagerOnboardingService.GetChecklistAsync(employee.Id));
+
+        // Completing the policy-acknowledgement task also stamps Employee.PoshAcknowledgedAt.
+        var policyItem = checklist.Single(i => i.TaskType == OnboardingTaskType.PolicyAcknowledgement);
+        var completed = await hrOnboardingService.CompleteItemAsync(policyItem.Id);
+        Assert.Equal(OnboardingTaskStatus.Completed, completed!.Status);
+
+        var employeeAfterAcknowledgement = await context.Employees.AsNoTracking().SingleAsync(e => e.Id == employee.Id);
+        Assert.NotNull(employeeAfterAcknowledgement.PoshAcknowledgedAt);
+    }
+
+    private OnboardingService CreateOnboardingService(
+        ApplicationDbContext context, Guid userId, IReadOnlyCollection<string> roles,
+        Guid? employeeId = null, IUserDirectory? userDirectory = null)
+    {
+        var effectiveUserDirectory = userDirectory ?? new NoOpUserDirectory();
+        return new OnboardingService(
+            context, new TestCurrentUserService(userId, roles, employeeId), effectiveUserDirectory,
+            new EmployeeService(context, new SequenceGenerator(context, new TestTenantContext(_tenantId)),
+                new TestCurrentUserService(userId, roles, employeeId)));
+    }
+
     private CandidatePortalAuthService CreateCandidatePortalAuthService(ApplicationDbContext context, IEmailSender emailSender) =>
         new(context, new TestTenantContext(_tenantId), emailSender, new JwtTokenGenerator(new TestJwtOptions()),
             NullLogger<CandidatePortalAuthService>.Instance);
@@ -766,11 +868,16 @@ public class RecruitmentFlowTests : IAsyncLifetime
 
     /// <summary>Display-name lookups aren't asserted on in these tests - only that the right
     /// scorecard rows are (in)visible - so a fixed placeholder is enough.</summary>
-    private class NoOpUserDirectory : IUserDirectory
+    private class NoOpUserDirectory(IReadOnlyDictionary<Guid, Guid>? userIdToEmployeeId = null) : IUserDirectory
     {
         public Task<IReadOnlyDictionary<Guid, string>> GetDisplayNamesAsync(
             IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyDictionary<Guid, string>>(userIds.ToDictionary(id => id, _ => "Test User"));
+
+        public Task<Guid?> GetEmployeeIdForUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(userIdToEmployeeId is not null && userIdToEmployeeId.TryGetValue(userId, out var employeeId)
+                ? employeeId
+                : (Guid?)null);
     }
 
     /// <summary>Only GetInterviewerCandidatesAsync (not exercised by these tests) calls into

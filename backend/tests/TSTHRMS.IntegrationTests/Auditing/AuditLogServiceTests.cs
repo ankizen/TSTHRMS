@@ -190,5 +190,8 @@ public class AuditLogServiceTests : IAsyncLifetime
                 : new Dictionary<Guid, string>();
             return Task.FromResult(result);
         }
+
+        public Task<Guid?> GetEmployeeIdForUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Guid?>(null);
     }
 }

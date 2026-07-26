@@ -45,6 +45,7 @@ public class EmployeeConfiguration : IEntityTypeConfiguration<Employee>
         builder.HasIndex(e => new { e.TenantId, e.Department });
         builder.HasIndex(e => new { e.TenantId, e.Designation });
         builder.HasIndex(e => new { e.TenantId, e.WorkLocation });
+        builder.HasIndex(e => new { e.TenantId, e.SourceApplicationId }).IsUnique();
 
         builder.HasOne(e => e.LegalEntity)
             .WithMany()

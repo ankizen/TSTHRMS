@@ -70,6 +70,12 @@ public class Employee : TenantScopedEntity
     /// <summary>Only meaningful for Contract/Intern employment types.</summary>
     public DateOnly? ContractStartDate { get; set; }
     public DateOnly? ContractEndDate { get; set; }
+
+    /// <summary>Recruitment & Onboarding Section 11: set when this employee was converted
+    /// one-click from a hired candidate's application, so BGV status and pipeline history stay
+    /// traceable even after Day 1. Deliberately a bare id (no navigation/FK) - Core HR's Employee
+    /// entity shouldn't take a compile-time dependency on the Recruitment module.</summary>
+    public Guid? SourceApplicationId { get; set; }
 }
 
 public enum Gender

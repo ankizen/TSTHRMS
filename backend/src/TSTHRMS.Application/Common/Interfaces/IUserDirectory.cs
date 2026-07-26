@@ -9,4 +9,9 @@ public interface IUserDirectory
 {
     Task<IReadOnlyDictionary<Guid, string>> GetDisplayNamesAsync(
         IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Recruitment Section 11: resolves a requisition's raising hiring manager (a
+    /// login/UserId) to their own Employee record, so a converted hire's ReportingManagerId can
+    /// be auto-set. Null if the user has no linked employee.</summary>
+    Task<Guid?> GetEmployeeIdForUserAsync(Guid userId, CancellationToken cancellationToken = default);
 }

@@ -150,5 +150,8 @@ public class EmployeeEditRequestServiceTests : IAsyncLifetime
         public Task<IReadOnlyDictionary<Guid, string>> GetDisplayNamesAsync(
             IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyDictionary<Guid, string>>(new Dictionary<Guid, string>());
+
+        public Task<Guid?> GetEmployeeIdForUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<Guid?>(null);
     }
 }

@@ -40,6 +40,7 @@ public interface IApplicationDbContext
     DbSet<CandidateOtp> CandidateOtps { get; }
     DbSet<BackgroundVerification> BackgroundVerifications { get; }
     DbSet<PreboardingChecklistItem> PreboardingChecklistItems { get; }
+    DbSet<OnboardingChecklistItem> OnboardingChecklistItems { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
 }

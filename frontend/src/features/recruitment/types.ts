@@ -363,4 +363,29 @@ export interface PreboardingChecklistItem {
   bankIfscCode: string | null
 }
 
+export interface ConvertToEmployeeResult {
+  succeeded: boolean
+  error: string | null
+  employee: { id: string; employeeCode: string; firstName: string; lastName: string } | null
+}
+
+export type OnboardingTaskType = "ItSetup" | "AccessProvisioning" | "InductionSession" | "PolicyAcknowledgement" | "BuddyAssignment"
+export type OnboardingTaskStatus = "Pending" | "Completed"
+
+export interface OnboardingChecklistItem {
+  id: string
+  taskType: OnboardingTaskType
+  ownerUserId: string | null
+  ownerDisplayName: string | null
+  dueDate: string
+  status: OnboardingTaskStatus
+  completedAt: string | null
+  isOverdue: boolean
+}
+
+export interface UpdateOnboardingItemRequest {
+  ownerUserId: string | null
+  dueDate: string | null
+}
+
 export type { Lookup }

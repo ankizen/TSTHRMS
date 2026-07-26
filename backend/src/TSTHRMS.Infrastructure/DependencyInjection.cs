@@ -94,6 +94,7 @@ public static class DependencyInjection
         services.AddScoped<IReferralService, ReferralService>();
         services.AddScoped<IBackgroundVerificationService, BackgroundVerificationService>();
         services.AddScoped<IPreboardingService, PreboardingService>();
+        services.AddScoped<IOnboardingService, OnboardingService>();
 
         return services;
     }

@@ -55,6 +55,7 @@ public class ApplicationDbContext(
     public DbSet<CandidateOtp> CandidateOtps => Set<CandidateOtp>();
     public DbSet<BackgroundVerification> BackgroundVerifications => Set<BackgroundVerification>();
     public DbSet<PreboardingChecklistItem> PreboardingChecklistItems => Set<PreboardingChecklistItem>();
+    public DbSet<OnboardingChecklistItem> OnboardingChecklistItems => Set<OnboardingChecklistItem>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

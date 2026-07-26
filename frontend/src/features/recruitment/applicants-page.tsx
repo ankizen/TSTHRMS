@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { AlertCircle, ArrowLeft, Banknote, CalendarClock, ClipboardCheck, FileCheck2, ShieldCheck, Star, UsersRound } from "lucide-react"
+import { AlertCircle, ArrowLeft, Banknote, CalendarClock, ClipboardCheck, FileCheck2, ShieldCheck, Star, UserCheck, UsersRound } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
 import { useNavigate, useParams } from "react-router-dom"
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/select"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
-  getApplicants, getAssessmentDetail, getTestConfiguration, moveApplicationStage,
+  convertToEmployee, getApplicants, getAssessmentDetail, getTestConfiguration, moveApplicationStage,
   scoreAssessment, sendAssessment, setTalentPool,
 } from "./api"
 import { BgvSheet } from "./bgv-sheet"
@@ -106,6 +106,18 @@ export function ApplicantsPage() {
     onError: () => toast.error("Couldn't save the score."),
   })
 
+  const convertMutation = useMutation({
+    mutationFn: (applicationId: string) => convertToEmployee(applicationId),
+    onSuccess: async (result) => {
+      toast.success(`Converted to employee ${result.employee?.employeeCode}.`)
+      await invalidate()
+      if (result.employee) {
+        navigate(`/recruitment/employees/${result.employee.id}/onboarding`)
+      }
+    },
+    onError: () => toast.error("Couldn't convert this candidate - check they're at Offer Accepted."),
+  })
+
   const handleStageChange = (applicationId: string, stage: ApplicationStage) => {
     if (REASON_REQUIRED_STAGES.includes(stage)) {
       setPendingMove({ applicationId, stage })
@@ -191,6 +203,8 @@ export function ApplicantsPage() {
                         candidateName: `${applicant.firstName} ${applicant.lastName}`,
                       })
                     }
+                    onConvertToEmployee={() => convertMutation.mutate(applicant.applicationId)}
+                    isConverting={convertMutation.isPending}
                   />
                 ))}
               </div>
@@ -246,7 +260,7 @@ export function ApplicantsPage() {
 
 function ApplicantCard({
   applicant, isAssessmentEnabled, onStageChange, onToggleTalentPool, onOpenInterviews, onSendAssessment,
-  onScoreAssessment, onOpenOffer, onOpenBgv, onOpenPreboarding,
+  onScoreAssessment, onOpenOffer, onOpenBgv, onOpenPreboarding, onConvertToEmployee, isConverting,
 }: {
   applicant: ApplicantListItem
   isAssessmentEnabled: boolean
@@ -258,6 +272,8 @@ function ApplicantCard({
   onOpenOffer: () => void
   onOpenBgv: () => void
   onOpenPreboarding: () => void
+  onConvertToEmployee: () => void
+  isConverting: boolean
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-xl border bg-card p-3 shadow-sm">
@@ -367,6 +383,13 @@ function ApplicantCard({
           Pre-boarding
         </Button>
       </div>
+
+      {applicant.stage === "OfferAccepted" && (
+        <Button type="button" size="sm" className="h-8 text-xs" onClick={onConvertToEmployee} disabled={isConverting}>
+          <UserCheck className="size-3.5" />
+          {isConverting ? "Converting..." : "Convert to Employee"}
+        </Button>
+      )}
     </div>
   )
 }

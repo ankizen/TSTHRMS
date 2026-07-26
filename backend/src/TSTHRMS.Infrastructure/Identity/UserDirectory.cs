@@ -19,4 +19,10 @@ public class UserDirectory(UserManager<ApplicationUser> userManager) : IUserDire
             .Select(u => new { u.Id, u.Email, u.UserName })
             .ToDictionaryAsync(u => u.Id, u => u.Email ?? u.UserName ?? u.Id.ToString(), cancellationToken);
     }
+
+    public async Task<Guid?> GetEmployeeIdForUserAsync(Guid userId, CancellationToken cancellationToken = default) =>
+        await userManager.Users
+            .Where(u => u.Id == userId)
+            .Select(u => u.EmployeeId)
+            .FirstOrDefaultAsync(cancellationToken);
 }

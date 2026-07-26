@@ -3,6 +3,7 @@ import type {
   ApplicantListItem,
   AssessmentDetail,
   Bgv,
+  ConvertToEmployeeResult,
   CreateOrReviseOfferRequest,
   InitiateBgvRequest,
   Interview,
@@ -14,6 +15,7 @@ import type {
   MoveApplicationStageRequest,
   MyInterview,
   Offer,
+  OnboardingChecklistItem,
   PreboardingChecklistItem,
   PublishJobPostingRequest,
   RequisitionStatus,
@@ -28,6 +30,7 @@ import type {
   TestConfigurationRequest,
   UpdateBgvStatusRequest,
   UpdateInterviewStatusRequest,
+  UpdateOnboardingItemRequest,
 } from "./types"
 
 export async function getRequisitions(status?: RequisitionStatus): Promise<JobRequisitionListItem[]> {
@@ -239,5 +242,31 @@ export async function completeItAssetTask(applicationId: string): Promise<Preboa
   const { data } = await apiClient.post<PreboardingChecklistItem>(
     `/recruitment/applications/${applicationId}/preboarding/it-asset-request/complete`,
   )
+  return data
+}
+
+export async function convertToEmployee(applicationId: string): Promise<ConvertToEmployeeResult> {
+  const { data } = await apiClient.post<ConvertToEmployeeResult>(
+    `/recruitment/applications/${applicationId}/convert-to-employee`,
+  )
+  return data
+}
+
+export async function getOnboardingChecklist(employeeId: string): Promise<OnboardingChecklistItem[]> {
+  const { data } = await apiClient.get<OnboardingChecklistItem[]>(
+    `/recruitment/employees/${employeeId}/onboarding-checklist`,
+  )
+  return data
+}
+
+export async function updateOnboardingItem(
+  itemId: string, request: UpdateOnboardingItemRequest,
+): Promise<OnboardingChecklistItem> {
+  const { data } = await apiClient.put<OnboardingChecklistItem>(`/recruitment/onboarding-checklist/${itemId}`, request)
+  return data
+}
+
+export async function completeOnboardingItem(itemId: string): Promise<OnboardingChecklistItem> {
+  const { data } = await apiClient.post<OnboardingChecklistItem>(`/recruitment/onboarding-checklist/${itemId}/complete`)
   return data
 }
